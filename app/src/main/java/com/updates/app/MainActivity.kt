@@ -308,7 +308,7 @@ private fun MainDashboard(
         Column(Modifier.fillMaxSize().padding(padding)) {
             when (selectedTab) {
                 "Home" -> HomeScreen(stories, query, onQueryChange, saved, onSave, selectedTopics, selectedFeedCategory, onFeedCategoryChange, onOpenStory)
-                "Explore" -> ExploreScreen(onExploreCategory)
+                "Explore" -> KnowledgeExploreScreen(onExploreCategory)
                 "Library" -> LibraryScreen(stories.filter { it.title in saved }, onOpenStory)
                 else -> ProfileScreen()
             }
