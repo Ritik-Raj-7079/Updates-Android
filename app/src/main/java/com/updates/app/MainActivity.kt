@@ -71,6 +71,7 @@ private fun UpdatesApp(
     var selectedTab by remember { mutableStateOf("Home") }
     var query by remember { mutableStateOf("") }
     var saved by remember { mutableStateOf(setOf<String>()) }
+    var savedBooks by remember { mutableStateOf(setOf<String>()) }
     var openedStory by remember { mutableStateOf<Story?>(null) }
     var selectedFeedCategory by remember { mutableStateOf("For You") }
 
@@ -122,6 +123,8 @@ private fun UpdatesApp(
                 query = query,
                 onQueryChange = { query = it },
                 saved = saved,
+                savedBooks = savedBooks,
+                onSaveBook = { key -> savedBooks = if (key in savedBooks) savedBooks - key else savedBooks + key },
                 onSave = { title ->
                     saved = if (title in saved) saved - title else saved + title
                 },
@@ -275,6 +278,8 @@ private fun MainDashboard(
     query: String,
     onQueryChange: (String) -> Unit,
     saved: Set<String>,
+    savedBooks: Set<String>,
+    onSaveBook: (String) -> Unit,
     onSave: (String) -> Unit,
     stories: List<Story>,
     selectedTopics: Set<String>,
@@ -313,7 +318,7 @@ private fun MainDashboard(
                 "Explore" -> KnowledgeExploreScreen(onExploreCategory)
                 "News" -> NewsScreen()
                 "Research" -> ResearchScreen()
-                "Library" -> LibraryScreen(stories.filter { it.title in saved }, onOpenStory)
+                "Library" -> DigitalLibraryScreen(savedBooks, onSaveBook)
                 else -> ProfileScreen()
             }
         }
