@@ -287,10 +287,11 @@ private fun MainDashboard(
         containerColor = Page,
         bottomBar = {
             NavigationBar(containerColor = Color.White) {
-                listOf("Home", "Explore", "Library", "Profile").forEach { tab ->
+                listOf("Home", "Explore", "News", "Library", "Profile").forEach { tab ->
                     val icon = when (tab) {
                         "Home" -> Icons.Filled.Home
                         "Explore" -> Icons.Filled.Explore
+                        "News" -> Icons.Filled.Article
                         "Library" -> Icons.Filled.Bookmarks
                         else -> Icons.Filled.Person
                     }
@@ -309,6 +310,7 @@ private fun MainDashboard(
             when (selectedTab) {
                 "Home" -> HomeScreen(stories, query, onQueryChange, saved, onSave, selectedTopics, selectedFeedCategory, onFeedCategoryChange, onOpenStory)
                 "Explore" -> KnowledgeExploreScreen(onExploreCategory)
+                "News" -> NewsScreen()
                 "Library" -> LibraryScreen(stories.filter { it.title in saved }, onOpenStory)
                 else -> ProfileScreen()
             }
