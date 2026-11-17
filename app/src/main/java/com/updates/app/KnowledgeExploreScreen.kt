@@ -28,6 +28,11 @@ import java.net.HttpURLConnection
 import java.net.URL
 import java.net.URLEncoder
 
+private val ExploreNavy = Color(0xFF071A57)
+private val ExploreBlue = Color(0xFF155EEF)
+private val ExplorePage = Color(0xFFF5F7FC)
+private val ExploreTopics = listOf("Technology", "Science", "Research", "Education", "History", "Environment", "Literature", "Business", "Space", "Health")
+
 private data class WikiSearchItem(
     val title: String,
     val description: String,
@@ -63,8 +68,8 @@ private fun KnowledgeExploreScreen(onExploreCategory: (String) -> Unit) {
         }
     }
 
-    Column(Modifier.fillMaxSize().background(Page).padding(horizontal = 20.dp, vertical = 18.dp)) {
-        Text("Explore", color = Navy, fontSize = 24.sp, fontWeight = FontWeight.ExtraBold)
+    Column(Modifier.fillMaxSize().background(ExplorePage).padding(horizontal = 20.dp, vertical = 18.dp)) {
+        Text("Explore", color = ExploreNavy, fontSize = 24.sp, fontWeight = FontWeight.ExtraBold)
         Text("Search a growing world of knowledge", color = Color.Gray, fontSize = 13.sp)
         Spacer(Modifier.height(16.dp))
         OutlinedTextField(
@@ -79,24 +84,24 @@ private fun KnowledgeExploreScreen(onExploreCategory: (String) -> Unit) {
         )
         Spacer(Modifier.height(12.dp))
         if (query.isBlank()) {
-            Text("Explore by category", color = Navy, fontWeight = FontWeight.Bold, fontSize = 16.sp)
+            Text("Explore by category", color = ExploreNavy, fontWeight = FontWeight.Bold, fontSize = 16.sp)
             Spacer(Modifier.height(10.dp))
             LazyColumn(verticalArrangement = Arrangement.spacedBy(9.dp)) {
-                items(Topics) { category ->
+                items(ExploreTopics) { category ->
                     Card(
                         modifier = Modifier.fillMaxWidth().clickable { onExploreCategory(category) },
                         colors = CardDefaults.cardColors(containerColor = Color.White),
                         shape = RoundedCornerShape(14.dp)
                     ) {
                         Row(Modifier.fillMaxWidth().padding(15.dp), verticalAlignment = Alignment.CenterVertically) {
-                            Text(category, modifier = Modifier.weight(1f), color = Navy, fontWeight = FontWeight.SemiBold)
-                            Text("Explore  ›", color = Blue, fontSize = 12.sp)
+                            Text(category, modifier = Modifier.weight(1f), color = ExploreNavy, fontWeight = FontWeight.SemiBold)
+                            Text("Explore  ›", color = ExploreBlue, fontSize = 12.sp)
                         }
                     }
                 }
             }
         } else if (loading) {
-            Box(Modifier.fillMaxWidth().padding(28.dp), contentAlignment = Alignment.Center) { CircularProgressIndicator(color = Blue) }
+            Box(Modifier.fillMaxWidth().padding(28.dp), contentAlignment = Alignment.Center) { CircularProgressIndicator(color = ExploreBlue) }
         } else if (error != null) {
             Text(error!!, color = Color(0xFFB42318), fontSize = 13.sp)
         } else if (results.isEmpty()) {
@@ -108,20 +113,20 @@ private fun KnowledgeExploreScreen(onExploreCategory: (String) -> Unit) {
                 items(results) { item ->
                     Card(colors = CardDefaults.cardColors(containerColor = Color.White), shape = RoundedCornerShape(15.dp)) {
                         Column(Modifier.fillMaxWidth().padding(15.dp)) {
-                            Text(item.title, color = Navy, fontSize = 16.sp, fontWeight = FontWeight.Bold)
+                            Text(item.title, color = ExploreNavy, fontSize = 16.sp, fontWeight = FontWeight.Bold)
                             if (item.description.isNotBlank()) {
                                 Spacer(Modifier.height(3.dp))
-                                Text(item.description, color = Blue, fontSize = 11.sp, fontWeight = FontWeight.SemiBold)
+                                Text(item.description, color = ExploreBlue, fontSize = 11.sp, fontWeight = FontWeight.SemiBold)
                             }
                             Spacer(Modifier.height(7.dp))
                             Text(item.excerpt, color = Color.DarkGray, fontSize = 13.sp, lineHeight = 19.sp)
                             Spacer(Modifier.height(9.dp))
                             Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.End, verticalAlignment = Alignment.CenterVertically) {
-                                Text("Read on Wikipedia", color = Blue, fontSize = 12.sp, fontWeight = FontWeight.SemiBold, modifier = Modifier.clickable {
+                                Text("Read on Wikipedia", color = ExploreBlue, fontSize = 12.sp, fontWeight = FontWeight.SemiBold, modifier = Modifier.clickable {
                                     context.startActivity(Intent(Intent.ACTION_VIEW, Uri.parse(item.url)))
                                 })
                                 Spacer(Modifier.width(5.dp))
-                                Icon(Icons.Filled.OpenInNew, contentDescription = "Open source", tint = Blue, modifier = Modifier.size(15.dp))
+                                Icon(Icons.Filled.OpenInNew, contentDescription = "Open source", tint = ExploreBlue, modifier = Modifier.size(15.dp))
                             }
                         }
                     }
