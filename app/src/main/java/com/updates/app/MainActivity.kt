@@ -97,6 +97,16 @@ private fun UpdatesApp(
                     showOnboarding = false
                 }
             )
+        } else if (openedStory != null) {
+            ArticleReaderScreen(
+                story = openedStory!!,
+                isSaved = openedStory!!.title in saved,
+                onBack = { openedStory = null },
+                onSave = {
+                    val title = openedStory!!.title
+                    saved = if (title in saved) saved - title else saved + title
+                }
+            )
         } else {
             MainDashboard(
                 selectedTab = selectedTab,
@@ -343,8 +353,16 @@ private fun HomeScreen(
             )
         }
         val filtered = stories.filter {
-            (query.isBlank() || it.title.contains(query, true) || it.category.contains(query, true) || it.summary.contains(query, true)) &&
-                (selectedTopics.isEmpty() || it.category.lowercase() in selectedTopics.map { topic -> topic.lowercase() })
+            val matchesSearch = query.isBlank() || it.title.contains(query, true) || it.category.contains(query, true) || it.summary.contains(query, true)
+            val matchesInterest = selectedTopics.isEmpty() || it.category.lowercase() in selectedTopics.map { topic -> topic.lowercase() }
+            val matchesFeed = when (selectedFeedCategory) {
+                "For You" -> true
+                "News" -> it.category == "NEWS"
+                "Research" -> it.category == "RESEARCH"
+                "Stories" -> it.category == "HISTORY" || it.category == "LITERATURE"
+                else -> it.category.equals(selectedFeedCategory, ignoreCase = true)
+            }
+            matchesSearch && matchesInterest && matchesFeed
         }
         if (filtered.isEmpty()) {
             item { Text("No matching stories yet. Try another search or update your interests.", color = Color.Gray) }
@@ -388,6 +406,35 @@ private fun StoryCard(story: Story, isSaved: Boolean, onSave: () -> Unit) {
     }
 }
 
+@Composable
+private fun ArticleReaderScreen(story: Story, isSaved: Boolean, onBack: () -> Unit, onSave: () -> Unit) {
+    Column(Modifier.fillMaxSize().background(Page)) {
+        Row(Modifier.fillMaxWidth().background(Color.White).padding(8.dp), verticalAlignment = Alignment.CenterVertically) {
+            IconButton(onClick = onBack) { Icon(Icons.Filled.ArrowBack, contentDescription = "Back", tint = Navy) }
+            Text("READING", color = Navy, fontWeight = FontWeight.Bold, modifier = Modifier.weight(1f))
+            IconButton(onClick = onSave) { Icon(if (isSaved) Icons.Filled.Bookmark else Icons.Filled.BookmarkBorder, contentDescription = "Bookmark", tint = Blue) }
+        }
+        Column(Modifier.fillMaxSize().padding(22.dp)) {
+            Text(story.category, color = Blue, fontSize = 11.sp, fontWeight = FontWeight.Bold, letterSpacing = 1.sp)
+            Spacer(Modifier.height(12.dp))
+            Text(story.title, color = Navy, fontSize = 27.sp, lineHeight = 34.sp, fontWeight = FontWeight.ExtraBold)
+            Spacer(Modifier.height(12.dp))
+            Text(story.readTime, color = Color.Gray, fontSize = 12.sp)
+            Spacer(Modifier.height(22.dp))
+            HorizontalDivider(color = Color(0xFFE3E8F2))
+            Spacer(Modifier.height(22.dp))
+            Text(story.summary, color = Color.DarkGray, fontSize = 16.sp, lineHeight = 26.sp, fontWeight = FontWeight.Medium)
+            Spacer(Modifier.height(18.dp))
+            Text("Why this topic matters", color = Navy, fontSize = 19.sp, fontWeight = FontWeight.Bold)
+            Spacer(Modifier.height(8.dp))
+            Text("Knowledge grows when we stay curious, ask thoughtful questions and explore reliable information. This introduction is a starting point for understanding the topic and discovering the ideas behind it.", color = Color.DarkGray, fontSize = 15.sp, lineHeight = 25.sp)
+            Spacer(Modifier.height(16.dp))
+            Text("Keep exploring", color = Navy, fontSize = 19.sp, fontWeight = FontWeight.Bold)
+            Spacer(Modifier.height(8.dp))
+            Text("Use the Explore section to discover related subjects. Save this reading to return to it later.", color = Color.DarkGray, fontSize = 15.sp, lineHeight = 25.sp)
+        }
+    }
+}
 @Composable
 private fun ExploreScreen(onChoose: () -> Unit) {
     Column(Modifier.fillMaxSize().padding(20.dp)) {
