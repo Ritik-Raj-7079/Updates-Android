@@ -108,8 +108,7 @@ private fun HomeScreen(
             Column(Modifier.fillMaxWidth().background(Navy, RoundedCornerShape(22.dp)).padding(20.dp)) {
                 Text("YOUR DAILY DOSE OF KNOWLEDGE", color = Orange, fontSize = 10.sp, fontWeight = FontWeight.Bold, letterSpacing = 1.sp)
                 Spacer(Modifier.height(8.dp))
-                Text("Discover something
-new every day.", color = Color.White, fontSize = 25.sp, fontWeight = FontWeight.Bold, lineHeight = 31.sp)
+                Text("Discover something\\nnew every day.", color = Color.White, fontSize = 25.sp, fontWeight = FontWeight.Bold, lineHeight = 31.sp)
                 Spacer(Modifier.height(8.dp))
                 Text("Ideas, discoveries and stories worth your time.", color = Color(0xFFDCE5FF), fontSize = 13.sp)
             }
