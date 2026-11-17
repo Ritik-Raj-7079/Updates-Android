@@ -47,6 +47,7 @@ fun NewsScreen() {
     var loading by remember { mutableStateOf(false) }
     var error by remember { mutableStateOf<String?>(null) }
     var refreshKey by remember { mutableIntStateOf(0) }
+    var openedArticle by remember { mutableStateOf<NewsItem?>(null) }
     val context = LocalContext.current
 
     LaunchedEffect(category, refreshKey) {
@@ -63,11 +64,16 @@ fun NewsScreen() {
         loading = false
     }
 
+    if (openedArticle != null) {
+        NewsArticleReader(article = openedArticle!!, onBack = { openedArticle = null })
+        return
+    }
+
     Column(Modifier.fillMaxSize().background(Color(0xFFF5F7FC)).padding(horizontal = 16.dp, vertical = 14.dp)) {
         Row(verticalAlignment = Alignment.CenterVertically) {
             Column(Modifier.weight(1f)) {
                 Text("News", color = Color(0xFF071A57), fontSize = 25.sp, fontWeight = FontWeight.ExtraBold)
-                Text("Headlines from BBC News RSS feeds", color = Color.Gray, fontSize = 11.sp)
+                Text("Discover and read news inside UPDATES", color = Color.Gray, fontSize = 11.sp)
             }
             IconButton(onClick = { refreshKey++ }) { Icon(Icons.Filled.Refresh, contentDescription = "Refresh news", tint = Color(0xFF155EEF)) }
         }
@@ -91,7 +97,7 @@ fun NewsScreen() {
             }
             else -> LazyColumn(verticalArrangement = Arrangement.spacedBy(10.dp), contentPadding = PaddingValues(bottom = 18.dp)) {
                 items(articles) { article ->
-                    Card(colors = CardDefaults.cardColors(containerColor = Color.White), shape = RoundedCornerShape(16.dp)) {
+                    Card(colors = CardDefaults.cardColors(containerColor = Color.White), shape = RoundedCornerShape(16.dp), modifier = Modifier.clickable { openedArticle = article }) {
                         Column(Modifier.fillMaxWidth().padding(15.dp)) {
                             Row(verticalAlignment = Alignment.CenterVertically) {
                                 Icon(Icons.Filled.Article, contentDescription = null, tint = Color(0xFF155EEF), modifier = Modifier.size(16.dp))
@@ -107,15 +113,13 @@ fun NewsScreen() {
                                 Text(article.summary, color = Color.DarkGray, fontSize = 12.sp, lineHeight = 18.sp)
                             }
                             Spacer(Modifier.height(10.dp))
-                            Text("Read full report  →", color = Color(0xFF155EEF), fontSize = 12.sp, fontWeight = FontWeight.SemiBold, modifier = Modifier.clickable {
-                                context.startActivity(Intent(Intent.ACTION_VIEW, Uri.parse(article.link)))
-                            })
+                            Text("Read in UPDATES  →", color = Color(0xFF155EEF), fontSize = 12.sp, fontWeight = FontWeight.SemiBold)
                         }
                     }
                 }
             }
         }
-        Text("Headlines and summaries are supplied by BBC News. Open the publisher link for the complete report.", color = Color.Gray, fontSize = 9.sp, lineHeight = 13.sp)
+        Text("Publisher-provided headlines and summaries. Tap a story to read its available content inside UPDATES.", color = Color.Gray, fontSize = 9.sp, lineHeight = 13.sp)
     }
 }
 
@@ -168,4 +172,35 @@ private fun loadNewsFeed(feed: NewsFeed): List<NewsItem> {
         }
         return result
     } finally { connection.disconnect() }
+}
+@Composable
+private fun NewsArticleReader(article: NewsItem, onBack: () -> Unit) {
+    val context = LocalContext.current
+    Column(Modifier.fillMaxSize().background(Color(0xFFF5F7FC))) {
+        Row(Modifier.fillMaxWidth().background(Color.White).padding(horizontal = 8.dp, vertical = 5.dp), verticalAlignment = Alignment.CenterVertically) {
+            IconButton(onClick = onBack) { Icon(Icons.Filled.ArrowBack, contentDescription = "Back", tint = Color(0xFF071A57)) }
+            Text("UPDATES  /  NEWS", color = Color(0xFF071A57), fontWeight = FontWeight.Bold, fontSize = 13.sp)
+        }
+        LazyColumn(contentPadding = PaddingValues(20.dp), verticalArrangement = Arrangement.spacedBy(14.dp)) {
+            item {
+                Text(article.source.uppercase(), color = Color(0xFF155EEF), fontSize = 11.sp, fontWeight = FontWeight.Bold, letterSpacing = 1.sp)
+                Text(article.date.ifBlank { "Latest report" }, color = Color.Gray, fontSize = 11.sp)
+                Spacer(Modifier.height(8.dp))
+                Text(article.title, color = Color(0xFF071A57), fontSize = 27.sp, lineHeight = 34.sp, fontWeight = FontWeight.ExtraBold)
+                Spacer(Modifier.height(12.dp))
+                HorizontalDivider(color = Color(0xFFE3E8F2))
+                Spacer(Modifier.height(14.dp))
+                Text("STORY SUMMARY", color = Color(0xFF155EEF), fontSize = 10.sp, fontWeight = FontWeight.Bold, letterSpacing = 1.sp)
+                Spacer(Modifier.height(8.dp))
+                Text(article.summary.ifBlank { "The publisher has not provided a summary for this report. You can visit the original source for more information." }, color = Color(0xFF252B38), fontSize = 17.sp, lineHeight = 28.sp)
+                Spacer(Modifier.height(16.dp))
+                Text("About this report", color = Color(0xFF071A57), fontSize = 18.sp, fontWeight = FontWeight.Bold)
+                Text("This page displays the headline and summary supplied through the publisher feed. It is not the complete publisher article.", color = Color.Gray, fontSize = 12.sp, lineHeight = 18.sp)
+                Spacer(Modifier.height(14.dp))
+                Button(onClick = { context.startActivity(Intent(Intent.ACTION_VIEW, Uri.parse(article.link))) }, modifier = Modifier.fillMaxWidth(), shape = RoundedCornerShape(13.dp), colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF155EEF))) {
+                    Text("Visit original publisher", fontWeight = FontWeight.SemiBold)
+                }
+            }
+        }
+    }
 }
