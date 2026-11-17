@@ -18,6 +18,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 
@@ -25,27 +26,234 @@ private val Navy = Color(0xFF071A57)
 private val Blue = Color(0xFF155EEF)
 private val Orange = Color(0xFFFF9900)
 private val Page = Color(0xFFF5F7FC)
+private val Topics = listOf(
+    "Technology", "Science", "Research", "Education", "History",
+    "Environment", "Literature", "Business", "Space", "Health"
+)
 
 class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
-        setContent { UpdatesApp() }
+        val preferences = getSharedPreferences("updates_preferences", MODE_PRIVATE)
+        val completed = preferences.getBoolean("onboarding_completed", false)
+        val savedTopics = preferences.getStringSet("selected_topics", emptySet()) ?: emptySet()
+        setContent {
+            UpdatesApp(
+                showOnboardingInitially = !completed,
+                initialTopics = savedTopics,
+                onOnboardingComplete = { topics ->
+                    preferences.edit()
+                        .putBoolean("onboarding_completed", true)
+                        .putStringSet("selected_topics", topics)
+                        .apply()
+                }
+            )
+        }
     }
 }
 
-private data class Story(val category: String, val title: String, val summary: String, val readTime: String)
+private data class Story(
+    val category: String,
+    val title: String,
+    val summary: String,
+    val readTime: String
+)
 
 @Composable
-private fun UpdatesApp() {
+private fun UpdatesApp(
+    showOnboardingInitially: Boolean,
+    initialTopics: Set<String>,
+    onOnboardingComplete: (Set<String>) -> Unit
+) {
+    var showOnboarding by remember { mutableStateOf(showOnboardingInitially) }
+    var selectedTopics by remember { mutableStateOf(initialTopics) }
     var selectedTab by remember { mutableStateOf("Home") }
     var query by remember { mutableStateOf("") }
     var saved by remember { mutableStateOf(setOf<String>()) }
+
     val stories = listOf(
         Story("TECHNOLOGY", "How artificial intelligence is changing everyday life", "A beginner-friendly look at the ideas and tools shaping the next generation of technology.", "5 min read"),
         Story("SCIENCE", "The science of a healthier planet", "Explore how researchers are studying climate, energy and sustainable solutions.", "7 min read"),
         Story("RESEARCH", "Inside the world of open scientific research", "Learn how research papers are shared, reviewed and used to build new knowledge.", "8 min read"),
-        Story("EDUCATION", "Small learning habits that make a big difference", "Practical ways to stay curious, organize ideas and keep learning every day.", "4 min read")
+        Story("EDUCATION", "Small learning habits that make a big difference", "Practical ways to stay curious, organize ideas and keep learning every day.", "4 min read"),
+        Story("HISTORY", "How ancient ideas shaped the modern world", "Discover the connections between historical discoveries and life today.", "6 min read"),
+        Story("SPACE", "A closer look at distant galaxies", "Explore how astronomers study objects far beyond our solar system.", "6 min read")
     )
+
+    MaterialTheme(
+        colorScheme = lightColorScheme(
+            primary = Blue,
+            secondary = Orange,
+            background = Page,
+            surface = Color.White
+        )
+    ) {
+        if (showOnboarding) {
+            OnboardingFlow(
+                selectedTopics = selectedTopics,
+                onTopicsChange = { selectedTopics = it },
+                onFinish = {
+                    onOnboardingComplete(selectedTopics)
+                    showOnboarding = false
+                }
+            )
+        } else {
+            MainDashboard(
+                selectedTab = selectedTab,
+                onTabSelected = { selectedTab = it },
+                query = query,
+                onQueryChange = { query = it },
+                saved = saved,
+                onSave = { title ->
+                    saved = if (title in saved) saved - title else saved + title
+                },
+                stories = stories,
+                selectedTopics = selectedTopics
+            )
+        }
+    }
+}
+
+@Composable
+private fun OnboardingFlow(
+    selectedTopics: Set<String>,
+    onTopicsChange: (Set<String>) -> Unit,
+    onFinish: () -> Unit
+) {
+    var page by remember { mutableIntStateOf(0) }
+
+    Column(
+        modifier = Modifier.fillMaxSize().background(Page).padding(24.dp),
+        horizontalAlignment = Alignment.CenterHorizontally
+    ) {
+        Row(
+            modifier = Modifier.fillMaxWidth(),
+            horizontalArrangement = Arrangement.End
+        ) {
+            Text(
+                text = if (page == 0) "1 OF 2" else "2 OF 2",
+                color = Blue,
+                fontSize = 11.sp,
+                fontWeight = FontWeight.Bold
+            )
+        }
+        Spacer(Modifier.weight(1f))
+        if (page == 0) {
+            BrandMark(size = 104)
+            Spacer(Modifier.height(24.dp))
+            Text(
+                "Welcome to UPDATES",
+                color = Navy,
+                fontSize = 27.sp,
+                fontWeight = FontWeight.ExtraBold,
+                textAlign = TextAlign.Center
+            )
+            Spacer(Modifier.height(12.dp))
+            Text(
+                "Build Your Own Treasure of Knowledge.",
+                color = Blue,
+                fontSize = 16.sp,
+                fontWeight = FontWeight.SemiBold,
+                textAlign = TextAlign.Center
+            )
+            Spacer(Modifier.height(14.dp))
+            Text(
+                "Discover ideas, explore research, read inspiring stories and grow your knowledge every day.",
+                color = Color.DarkGray,
+                fontSize = 14.sp,
+                lineHeight = 22.sp,
+                textAlign = TextAlign.Center
+            )
+        } else {
+            Text(
+                "What are you curious about?",
+                color = Navy,
+                fontSize = 25.sp,
+                fontWeight = FontWeight.ExtraBold,
+                textAlign = TextAlign.Center
+            )
+            Spacer(Modifier.height(10.dp))
+            Text(
+                "Choose a few interests to shape your reading experience. You can change them later.",
+                color = Color.Gray,
+                fontSize = 14.sp,
+                lineHeight = 21.sp,
+                textAlign = TextAlign.Center
+            )
+            Spacer(Modifier.height(24.dp))
+            Topics.chunked(2).forEach { row ->
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.spacedBy(10.dp)
+                ) {
+                    row.forEach { topic ->
+                        val selected = topic in selectedTopics
+                        FilterChip(
+                            selected = selected,
+                            onClick = {
+                                onTopicsChange(
+                                    if (selected) selectedTopics - topic else selectedTopics + topic
+                                )
+                            },
+                            label = { Text(topic) },
+                            leadingIcon = if (selected) {
+                                { Icon(Icons.Filled.Check, contentDescription = null, modifier = Modifier.size(16.dp)) }
+                            } else null,
+                            modifier = Modifier.weight(1f)
+                        )
+                    }
+                }
+            }
+        }
+        Spacer(Modifier.weight(1f))
+        Button(
+            onClick = {
+                if (page == 0) page = 1 else onFinish()
+            },
+            modifier = Modifier.fillMaxWidth().height(54.dp),
+            shape = RoundedCornerShape(16.dp),
+            colors = ButtonDefaults.buttonColors(containerColor = Blue)
+        ) {
+            Text(if (page == 0) "Get started" else "Continue to UPDATES", fontSize = 15.sp, fontWeight = FontWeight.Bold)
+            Spacer(Modifier.width(8.dp))
+            Icon(Icons.Filled.ArrowForward, contentDescription = null)
+        }
+        if (page == 1) {
+            TextButton(onClick = onFinish) {
+                Text("Skip for now", color = Color.Gray)
+            }
+        }
+    }
+}
+
+@Composable
+private fun BrandMark(size: Int) {
+    Box(
+        modifier = Modifier.size(size.dp).background(Navy, RoundedCornerShape((size / 4).dp)),
+        contentAlignment = Alignment.Center
+    ) {
+        Column(horizontalAlignment = Alignment.CenterHorizontally) {
+            Text("U", color = Color.White, fontSize = (size / 2.3).sp, fontWeight = FontWeight.ExtraBold, lineHeight = (size / 2.5).sp)
+            Row(verticalAlignment = Alignment.CenterVertically) {
+                Box(Modifier.width((size / 3).dp).height(3.dp).background(Orange, RoundedCornerShape(4.dp)))
+                Spacer(Modifier.width(4.dp))
+                Box(Modifier.width((size / 3).dp).height(3.dp).background(Color.White, RoundedCornerShape(4.dp)))
+            }
+        }
+    }
+}
+
+@Composable
+private fun MainDashboard(
+    selectedTab: String,
+    onTabSelected: (String) -> Unit,
+    query: String,
+    onQueryChange: (String) -> Unit,
+    saved: Set<String>,
+    onSave: (String) -> Unit,
+    stories: List<Story>,
+    selectedTopics: Set<String>
+) {
     Scaffold(
         containerColor = Page,
         bottomBar = {
@@ -59,7 +267,7 @@ private fun UpdatesApp() {
                     }
                     NavigationBarItem(
                         selected = selectedTab == tab,
-                        onClick = { selectedTab = tab },
+                        onClick = { onTabSelected(tab) },
                         icon = { Icon(icon, contentDescription = tab) },
                         label = { Text(tab) },
                         colors = NavigationBarItemDefaults.colors(selectedIconColor = Blue, selectedTextColor = Blue)
@@ -70,10 +278,8 @@ private fun UpdatesApp() {
     ) { padding ->
         Column(Modifier.fillMaxSize().padding(padding)) {
             when (selectedTab) {
-                "Home" -> HomeScreen(stories, query, { query = it }, saved, { title ->
-                    saved = if (title in saved) saved - title else saved + title
-                })
-                "Explore" -> ExploreScreen { selectedTab = "Home" }
+                "Home" -> HomeScreen(stories, query, onQueryChange, saved, onSave, selectedTopics)
+                "Explore" -> ExploreScreen { onTabSelected("Home") }
                 "Library" -> LibraryScreen(stories.filter { it.title in saved })
                 else -> ProfileScreen()
             }
@@ -83,8 +289,12 @@ private fun UpdatesApp() {
 
 @Composable
 private fun HomeScreen(
-    stories: List<Story>, query: String, onQuery: (String) -> Unit,
-    saved: Set<String>, onSave: (String) -> Unit
+    stories: List<Story>,
+    query: String,
+    onQuery: (String) -> Unit,
+    saved: Set<String>,
+    onSave: (String) -> Unit,
+    selectedTopics: Set<String>
 ) {
     LazyColumn(
         modifier = Modifier.fillMaxSize(),
@@ -93,15 +303,15 @@ private fun HomeScreen(
     ) {
         item {
             Row(verticalAlignment = Alignment.CenterVertically) {
-                Box(Modifier.size(42.dp).background(Navy, RoundedCornerShape(14.dp)), contentAlignment = Alignment.Center) {
-                    Text("U", color = Color.White, fontSize = 25.sp, fontWeight = FontWeight.Bold)
-                }
+                BrandMark(42)
                 Spacer(Modifier.width(11.dp))
                 Column(Modifier.weight(1f)) {
                     Text("UPDATES", color = Navy, fontWeight = FontWeight.ExtraBold, fontSize = 19.sp, letterSpacing = 1.sp)
                     Text("Build Your Own Treasure of Knowledge.", color = Color.Gray, fontSize = 10.sp)
                 }
-                IconButton(onClick = {}) { Icon(Icons.Filled.NotificationsNone, contentDescription = "Notifications", tint = Navy) }
+                IconButton(onClick = {}) {
+                    Icon(Icons.Filled.NotificationsNone, contentDescription = "Notifications", tint = Navy)
+                }
             }
         }
         item {
@@ -115,7 +325,8 @@ private fun HomeScreen(
         }
         item {
             OutlinedTextField(
-                value = query, onValueChange = onQuery,
+                value = query,
+                onValueChange = onQuery,
                 modifier = Modifier.fillMaxWidth(),
                 placeholder = { Text("Search topics, stories and research") },
                 leadingIcon = { Icon(Icons.Filled.Search, contentDescription = null) },
@@ -124,12 +335,23 @@ private fun HomeScreen(
                 colors = OutlinedTextFieldDefaults.colors(unfocusedContainerColor = Color.White, focusedContainerColor = Color.White)
             )
         }
-        item { SectionTitle("Recommended for you", "Based on your curiosity") }
-        val filtered = stories.filter { it.title.contains(query, true) || it.category.contains(query, true) || it.summary.contains(query, true) }
+        item {
+            SectionTitle(
+                "Recommended for you",
+                if (selectedTopics.isEmpty()) "A little knowledge for every curious mind"
+                else "Your interests: " + selectedTopics.take(3).joinToString(", ")
+            )
+        }
+        val filtered = stories.filter {
+            (query.isBlank() || it.title.contains(query, true) || it.category.contains(query, true) || it.summary.contains(query, true)) &&
+                (selectedTopics.isEmpty() || it.category.lowercase() in selectedTopics.map { topic -> topic.lowercase() })
+        }
         if (filtered.isEmpty()) {
-            item { Text("No matching stories yet. Try another search.", color = Color.Gray) }
+            item { Text("No matching stories yet. Try another search or update your interests.", color = Color.Gray) }
         } else {
-            items(filtered) { story -> StoryCard(story, story.title in saved) { onSave(story.title) } }
+            items(filtered) { story ->
+                StoryCard(story, story.title in saved) { onSave(story.title) }
+            }
         }
         item {
             Text("More knowledge. More perspectives. Every day.", color = Blue, fontSize = 12.sp, fontWeight = FontWeight.SemiBold, modifier = Modifier.padding(vertical = 8.dp))
@@ -168,11 +390,10 @@ private fun StoryCard(story: Story, isSaved: Boolean, onSave: () -> Unit) {
 
 @Composable
 private fun ExploreScreen(onChoose: () -> Unit) {
-    val categories = listOf("Technology", "Science", "Research", "Education", "History", "Environment", "Literature", "Business", "Health & Wellbeing", "Space")
     Column(Modifier.fillMaxSize().padding(20.dp)) {
         SectionTitle("Explore", "Find a topic that sparks your curiosity")
         Spacer(Modifier.height(18.dp))
-        categories.chunked(2).forEach { row ->
+        Topics.chunked(2).forEach { row ->
             Row(horizontalArrangement = Arrangement.spacedBy(12.dp), modifier = Modifier.fillMaxWidth()) {
                 row.forEach { category ->
                     Card(
@@ -183,7 +404,6 @@ private fun ExploreScreen(onChoose: () -> Unit) {
                         Text(category, modifier = Modifier.fillMaxWidth().padding(18.dp), color = Navy, fontWeight = FontWeight.SemiBold)
                     }
                 }
-                if (row.size == 1) Spacer(Modifier.weight(1f))
             }
         }
     }
@@ -194,9 +414,12 @@ private fun LibraryScreen(savedStories: List<Story>) {
     Column(Modifier.fillMaxSize().padding(20.dp)) {
         SectionTitle("My Library", "Your saved reading, all in one place")
         Spacer(Modifier.height(16.dp))
-        if (savedStories.isEmpty()) Text("Your library is empty. Save a story from Home to find it here.", color = Color.Gray)
-        else LazyColumn(verticalArrangement = Arrangement.spacedBy(12.dp)) {
-            items(savedStories) { StoryCard(it, true) {} }
+        if (savedStories.isEmpty()) {
+            Text("Your library is empty. Save a story from Home to find it here.", color = Color.Gray)
+        } else {
+            LazyColumn(verticalArrangement = Arrangement.spacedBy(12.dp)) {
+                items(savedStories) { StoryCard(it, true) {} }
+            }
         }
     }
 }
@@ -212,6 +435,6 @@ private fun ProfileScreen() {
         Text("Welcome to UPDATES", color = Navy, fontSize = 21.sp, fontWeight = FontWeight.Bold)
         Text("Your knowledge journey starts here.", color = Color.Gray, fontSize = 13.sp)
         Spacer(Modifier.height(24.dp))
-        Text("Profile, interests and account settings will be added in the next development milestone.", color = Color.DarkGray, fontSize = 14.sp)
+        Text("Profile, interests and account settings will be added in upcoming milestones.", color = Color.DarkGray, fontSize = 14.sp)
     }
 }
