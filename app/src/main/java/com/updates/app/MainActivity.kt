@@ -72,6 +72,7 @@ private fun UpdatesApp(
     var query by remember { mutableStateOf("") }
     var saved by remember { mutableStateOf(setOf<String>()) }
     var openedStory by remember { mutableStateOf<Story?>(null) }
+    var selectedFeedCategory by remember { mutableStateOf("For You") }
 
     val stories = listOf(
         Story("TECHNOLOGY", "How artificial intelligence is changing everyday life", "A beginner-friendly look at the ideas and tools shaping the next generation of technology.", "5 min read"),
@@ -79,7 +80,12 @@ private fun UpdatesApp(
         Story("RESEARCH", "Inside the world of open scientific research", "Learn how research papers are shared, reviewed and used to build new knowledge.", "8 min read"),
         Story("EDUCATION", "Small learning habits that make a big difference", "Practical ways to stay curious, organize ideas and keep learning every day.", "4 min read"),
         Story("HISTORY", "How ancient ideas shaped the modern world", "Discover the connections between historical discoveries and life today.", "6 min read"),
-        Story("SPACE", "A closer look at distant galaxies", "Explore how astronomers study objects far beyond our solar system.", "6 min read")
+        Story("SPACE", "A closer look at distant galaxies", "Explore how astronomers study objects far beyond our solar system.", "6 min read"),
+        Story("ENVIRONMENT", "Everyday choices for a cleaner environment", "Discover practical ideas for reducing waste, saving resources and understanding environmental challenges.", "5 min read"),
+        Story("LITERATURE", "Why stories remain powerful across generations", "Explore how books and storytelling preserve ideas, cultures and human experiences.", "6 min read"),
+        Story("BUSINESS", "How small businesses turn ideas into value", "A simple introduction to customers, planning, innovation and responsible business growth.", "5 min read"),
+        Story("HEALTH", "Understanding the science of good sleep", "Learn why sleep matters for learning, focus and everyday wellbeing.", "4 min read"),
+        Story("NEWS", "How to read the news with a critical mind", "Learn to check sources, compare reports and separate verified information from opinion.", "4 min read")
     )
 
     MaterialTheme(
@@ -121,6 +127,12 @@ private fun UpdatesApp(
                 },
                 stories = stories,
                 selectedTopics = selectedTopics,
+                selectedFeedCategory = selectedFeedCategory,
+                onFeedCategoryChange = { selectedFeedCategory = it },
+                onExploreCategory = { category ->
+                    selectedFeedCategory = category
+                    selectedTab = "Home"
+                },
                 onOpenStory = { openedStory = it }
             )
         }
@@ -266,6 +278,9 @@ private fun MainDashboard(
     onSave: (String) -> Unit,
     stories: List<Story>,
     selectedTopics: Set<String>,
+    selectedFeedCategory: String,
+    onFeedCategoryChange: (String) -> Unit,
+    onExploreCategory: (String) -> Unit,
     onOpenStory: (Story) -> Unit
 ) {
     Scaffold(
@@ -292,8 +307,8 @@ private fun MainDashboard(
     ) { padding ->
         Column(Modifier.fillMaxSize().padding(padding)) {
             when (selectedTab) {
-                "Home" -> HomeScreen(stories, query, onQueryChange, saved, onSave, selectedTopics, onOpenStory)
-                "Explore" -> ExploreScreen { onTabSelected("Home") }
+                "Home" -> HomeScreen(stories, query, onQueryChange, saved, onSave, selectedTopics, selectedFeedCategory, onFeedCategoryChange, onOpenStory)
+                "Explore" -> ExploreScreen(onExploreCategory)
                 "Library" -> LibraryScreen(stories.filter { it.title in saved }, onOpenStory)
                 else -> ProfileScreen()
             }
@@ -309,10 +324,11 @@ private fun HomeScreen(
     saved: Set<String>,
     onSave: (String) -> Unit,
     selectedTopics: Set<String>,
+    selectedFeedCategory: String,
+    onFeedCategoryChange: (String) -> Unit,
     onOpenStory: (Story) -> Unit
 ) {
-    var selectedFeedCategory by remember { mutableStateOf("For You") }
-    val feedCategories = listOf("For You", "Research", "Stories", "Science", "Technology")
+    val feedCategories = listOf("For You", "News", "Research", "Stories") + Topics
     LazyColumn(
         modifier = Modifier.fillMaxSize(),
         contentPadding = PaddingValues(horizontal = 20.dp, vertical = 18.dp),
@@ -355,7 +371,7 @@ private fun HomeScreen(
         item {
             LazyRow(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                 items(feedCategories) { category ->
-                    FilterChip(selected = selectedFeedCategory == category, onClick = { selectedFeedCategory = category }, label = { Text(category) })
+                    FilterChip(selected = selectedFeedCategory == category, onClick = { onFeedCategoryChange(category) }, label = { Text(category) })
                 }
             }
         }
@@ -368,11 +384,9 @@ private fun HomeScreen(
         }
         val filtered = stories.filter {
             val matchesSearch = query.isBlank() || it.title.contains(query, true) || it.category.contains(query, true) || it.summary.contains(query, true)
-            val matchesInterest = selectedTopics.isEmpty() || it.category.lowercase() in selectedTopics.map { topic -> topic.lowercase() }
+            val matchesInterest = selectedFeedCategory != "For You" || selectedTopics.isEmpty() || it.category.lowercase() in selectedTopics.map { topic -> topic.lowercase() }
             val matchesFeed = when (selectedFeedCategory) {
                 "For You" -> true
-                "News" -> it.category == "NEWS"
-                "Research" -> it.category == "RESEARCH"
                 "Stories" -> it.category == "HISTORY" || it.category == "LITERATURE"
                 else -> it.category.equals(selectedFeedCategory, ignoreCase = true)
             }
@@ -450,19 +464,44 @@ private fun ArticleReaderScreen(story: Story, isSaved: Boolean, onBack: () -> Un
     }
 }
 @Composable
-private fun ExploreScreen(onChoose: () -> Unit) {
-    Column(Modifier.fillMaxSize().padding(20.dp)) {
-        SectionTitle("Explore", "Find a topic that sparks your curiosity")
-        Spacer(Modifier.height(18.dp))
-        Topics.chunked(2).forEach { row ->
-            Row(horizontalArrangement = Arrangement.spacedBy(12.dp), modifier = Modifier.fillMaxWidth()) {
-                row.forEach { category ->
-                    Card(
-                        modifier = Modifier.weight(1f).padding(bottom = 10.dp).clickable { onChoose() },
-                        colors = CardDefaults.cardColors(containerColor = Color.White),
-                        shape = RoundedCornerShape(16.dp)
+private fun ExploreScreen(onChooseCategory: (String) -> Unit) {
+    val descriptions = mapOf(
+        "Technology" to "AI, computers, software and innovation",
+        "Science" to "Discoveries, experiments and the natural world",
+        "Research" to "Studies, papers and new findings",
+        "Education" to "Learning methods, skills and knowledge",
+        "History" to "People, events and the past",
+        "Environment" to "Climate, nature and sustainability",
+        "Literature" to "Books, writing and storytelling",
+        "Business" to "Ideas, markets and entrepreneurship",
+        "Space" to "Astronomy, planets and the universe",
+        "Health" to "Wellbeing and health science"
+    )
+    Column(Modifier.fillMaxSize().padding(horizontal = 20.dp, vertical = 18.dp)) {
+        SectionTitle("Explore", "Choose a subject and discover something new")
+        Spacer(Modifier.height(8.dp))
+        Text("Explore by interest", color = Blue, fontSize = 12.sp, fontWeight = FontWeight.Bold)
+        Spacer(Modifier.height(14.dp))
+        LazyColumn(verticalArrangement = Arrangement.spacedBy(10.dp)) {
+            items(Topics) { category ->
+                Card(
+                    modifier = Modifier.fillMaxWidth().clickable { onChooseCategory(category) },
+                    colors = CardDefaults.cardColors(containerColor = Color.White),
+                    shape = RoundedCornerShape(16.dp)
+                ) {
+                    Row(
+                        modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 15.dp),
+                        verticalAlignment = Alignment.CenterVertically
                     ) {
-                        Text(category, modifier = Modifier.fillMaxWidth().padding(18.dp), color = Navy, fontWeight = FontWeight.SemiBold)
+                        Box(Modifier.size(42.dp).background(Page, RoundedCornerShape(12.dp)), contentAlignment = Alignment.Center) {
+                            Icon(Icons.Filled.AutoStories, contentDescription = null, tint = Blue)
+                        }
+                        Spacer(Modifier.width(13.dp))
+                        Column(Modifier.weight(1f)) {
+                            Text(category, color = Navy, fontWeight = FontWeight.Bold, fontSize = 15.sp)
+                            Text(descriptions[category] ?: "Explore this subject", color = Color.Gray, fontSize = 11.sp)
+                        }
+                        Icon(Icons.Filled.ChevronRight, contentDescription = "Open $category", tint = Blue)
                     }
                 }
             }
