@@ -41,7 +41,7 @@ private data class WikiSearchItem(
 )
 
 @Composable
-private fun KnowledgeExploreScreen(onExploreCategory: (String) -> Unit) {
+fun KnowledgeExploreScreen(onExploreCategory: (String) -> Unit) {
     var query by remember { mutableStateOf("") }
     var results by remember { mutableStateOf<List<WikiSearchItem>>(emptyList()) }
     var loading by remember { mutableStateOf(false) }
