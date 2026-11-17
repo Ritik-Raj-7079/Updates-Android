@@ -70,6 +70,7 @@ private fun UpdatesApp(
     var selectedTab by remember { mutableStateOf("Home") }
     var query by remember { mutableStateOf("") }
     var saved by remember { mutableStateOf(setOf<String>()) }
+    var openedStory by remember { mutableStateOf<Story?>(null) }
 
     val stories = listOf(
         Story("TECHNOLOGY", "How artificial intelligence is changing everyday life", "A beginner-friendly look at the ideas and tools shaping the next generation of technology.", "5 min read"),
@@ -118,7 +119,8 @@ private fun UpdatesApp(
                     saved = if (title in saved) saved - title else saved + title
                 },
                 stories = stories,
-                selectedTopics = selectedTopics
+                selectedTopics = selectedTopics,
+                onOpenStory = { openedStory = it }
             )
         }
     }
@@ -262,7 +264,8 @@ private fun MainDashboard(
     saved: Set<String>,
     onSave: (String) -> Unit,
     stories: List<Story>,
-    selectedTopics: Set<String>
+    selectedTopics: Set<String>,
+    onOpenStory: (Story) -> Unit
 ) {
     Scaffold(
         containerColor = Page,
@@ -288,9 +291,9 @@ private fun MainDashboard(
     ) { padding ->
         Column(Modifier.fillMaxSize().padding(padding)) {
             when (selectedTab) {
-                "Home" -> HomeScreen(stories, query, onQueryChange, saved, onSave, selectedTopics)
+                "Home" -> HomeScreen(stories, query, onQueryChange, saved, onSave, selectedTopics, onOpenStory)
                 "Explore" -> ExploreScreen { onTabSelected("Home") }
-                "Library" -> LibraryScreen(stories.filter { it.title in saved })
+                "Library" -> LibraryScreen(stories.filter { it.title in saved }, onOpenStory)
                 else -> ProfileScreen()
             }
         }
@@ -304,8 +307,11 @@ private fun HomeScreen(
     onQuery: (String) -> Unit,
     saved: Set<String>,
     onSave: (String) -> Unit,
-    selectedTopics: Set<String>
+    selectedTopics: Set<String>,
+    onOpenStory: (Story) -> Unit
 ) {
+    var selectedFeedCategory by remember { mutableStateOf("For You") }
+    val feedCategories = listOf("For You", "Research", "Stories", "Science", "Technology")
     LazyColumn(
         modifier = Modifier.fillMaxSize(),
         contentPadding = PaddingValues(horizontal = 20.dp, vertical = 18.dp),
@@ -346,8 +352,15 @@ private fun HomeScreen(
             )
         }
         item {
+            LazyRow(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                items(feedCategories) { category ->
+                    FilterChip(selected = selectedFeedCategory == category, onClick = { selectedFeedCategory = category }, label = { Text(category) })
+                }
+            }
+        }
+        item {
             SectionTitle(
-                "Recommended for you",
+                if (selectedFeedCategory == "For You") "Recommended for you" else selectedFeedCategory,
                 if (selectedTopics.isEmpty()) "A little knowledge for every curious mind"
                 else "Your interests: " + selectedTopics.take(3).joinToString(", ")
             )
@@ -368,7 +381,7 @@ private fun HomeScreen(
             item { Text("No matching stories yet. Try another search or update your interests.", color = Color.Gray) }
         } else {
             items(filtered) { story ->
-                StoryCard(story, story.title in saved) { onSave(story.title) }
+                StoryCard(story, story.title in saved, onSave = { onSave(story.title) }, onOpen = { onOpenStory(story) })
             }
         }
         item {
@@ -386,7 +399,7 @@ private fun SectionTitle(title: String, subtitle: String) {
 }
 
 @Composable
-private fun StoryCard(story: Story, isSaved: Boolean, onSave: () -> Unit) {
+private fun StoryCard(story: Story, isSaved: Boolean, onSave: () -> Unit, onOpen: () -> Unit) {
     Column(Modifier.fillMaxWidth().background(Color.White, RoundedCornerShape(18.dp)).padding(16.dp)) {
         Row(verticalAlignment = Alignment.CenterVertically) {
             Text(story.category, color = Blue, fontSize = 10.sp, fontWeight = FontWeight.Bold, modifier = Modifier.weight(1f))
@@ -394,14 +407,14 @@ private fun StoryCard(story: Story, isSaved: Boolean, onSave: () -> Unit) {
                 Icon(if (isSaved) Icons.Filled.Bookmark else Icons.Filled.BookmarkBorder, contentDescription = "Save story", tint = Blue)
             }
         }
-        Text(story.title, color = Navy, fontSize = 17.sp, fontWeight = FontWeight.Bold, lineHeight = 22.sp)
+        Text(story.title, color = Navy, fontSize = 17.sp, fontWeight = FontWeight.Bold, lineHeight = 22.sp, modifier = Modifier.clickable { onOpen() })
         Spacer(Modifier.height(6.dp))
         Text(story.summary, color = Color.DarkGray, fontSize = 13.sp, lineHeight = 19.sp)
         Spacer(Modifier.height(12.dp))
         Row(verticalAlignment = Alignment.CenterVertically) {
             Text(story.readTime, color = Color.Gray, fontSize = 11.sp)
             Spacer(Modifier.weight(1f))
-            Text("Read more  →", color = Blue, fontSize = 12.sp, fontWeight = FontWeight.SemiBold)
+            Text("Read more  →", color = Blue, fontSize = 12.sp, fontWeight = FontWeight.SemiBold, modifier = Modifier.clickable { onOpen() })
         }
     }
 }
@@ -457,7 +470,7 @@ private fun ExploreScreen(onChoose: () -> Unit) {
 }
 
 @Composable
-private fun LibraryScreen(savedStories: List<Story>) {
+private fun LibraryScreen(savedStories: List<Story>, onOpenStory: (Story) -> Unit) {
     Column(Modifier.fillMaxSize().padding(20.dp)) {
         SectionTitle("My Library", "Your saved reading, all in one place")
         Spacer(Modifier.height(16.dp))
@@ -465,7 +478,7 @@ private fun LibraryScreen(savedStories: List<Story>) {
             Text("Your library is empty. Save a story from Home to find it here.", color = Color.Gray)
         } else {
             LazyColumn(verticalArrangement = Arrangement.spacedBy(12.dp)) {
-                items(savedStories) { StoryCard(it, true) {} }
+                items(savedStories) { story -> StoryCard(story, true, onSave = {}, onOpen = { onOpenStory(story) }) }
             }
         }
     }
