@@ -47,7 +47,7 @@ class MainActivity : ComponentActivity() {
         for (index in 0 until articleArray.length()) {
             val item = articleArray.optJSONObject(index) ?: continue
             initialArticles.add(CommunityArticle(item.optString("id"), item.optString("title"),
-                item.optString("category"), item.optString("body"), item.optLong("publishedAt"), item.optString("authorName", "Reader")) )
+                item.optString("category"), item.optString("body"), item.optLong("publishedAt"), item.optString("authorName", "Reader"), item.optString("authorUid", "")) )
         }
         setContent {
             AuthGate { firebaseUser, onSignOut ->
@@ -59,6 +59,7 @@ class MainActivity : ComponentActivity() {
                 initialProfileBio = profileBio,
                 userId = firebaseUser.uid,
                 userEmail = firebaseUser.email ?: "",
+                onSignOut = onSignOut,
                 onProfileChange = { name, bio ->
                     preferences.edit().putString("profile_name", name).putString("profile_bio", bio).apply()
                 },
@@ -67,7 +68,7 @@ class MainActivity : ComponentActivity() {
                     articles.forEach { article ->
                         array.put(JSONObject().put("id", article.id).put("title", article.title)
                             .put("category", article.category).put("body", article.body)
-                            .put("publishedAt", article.publishedAt).put("authorName", article.authorName))
+                            .put("publishedAt", article.publishedAt).put("authorName", article.authorName).put("authorUid", article.authorUid))
                     }
                     preferences.edit().putString("community_articles", array.toString()).apply()
                 },
@@ -99,6 +100,7 @@ private fun UpdatesApp(
     initialProfileBio: String,
     userId: String,
     userEmail: String,
+    onSignOut: () -> Unit,
     onProfileChange: (String, String) -> Unit,
     onArticlesChange: (List<CommunityArticle>) -> Unit,
     onOnboardingComplete: (Set<String>) -> Unit
@@ -113,6 +115,7 @@ private fun UpdatesApp(
     var displayName by remember { mutableStateOf(initialDisplayName) }
     var profileBio by remember { mutableStateOf(initialProfileBio) }
     var cloudProfileMessage by remember { mutableStateOf("Syncing profile…") }
+    var cloudArticleMessage by remember { mutableStateOf("Loading community…") }
 
     LaunchedEffect(userId) {
         CloudProfileRepository.load(userId, onSuccess = { cloudName, cloudBio ->
@@ -175,7 +178,7 @@ private fun UpdatesApp(
                 communityArticles = communityArticles,
                 displayName = displayName,
                 profileBio = profileBio,
-                cloudProfileMessage = cloudProfileMessage,
+                cloudProfileMessage = cloudProfileMessage,\n                cloudArticleMessage = cloudArticleMessage,\n                currentUserId = userId,\n                onSignOut = onSignOut,
                 onProfileSave = { name, bio ->
                     displayName = name
                     profileBio = bio
@@ -647,6 +650,6 @@ private fun UserProfileScreen(
             Icon(Icons.Filled.Edit, contentDescription = null); Spacer(Modifier.width(8.dp)); Text("Write an article")
         }
         Spacer(Modifier.height(14.dp))
-        Text(cloudProfileMessage, color = Blue, fontSize = 11.sp, lineHeight = 16.sp)
+        Text(cloudProfileMessage, color = Blue, fontSize = 11.sp, lineHeight = 16.sp)\n        Spacer(Modifier.height(16.dp))\n        OutlinedButton(onClick = onSignOut, modifier = Modifier.fillMaxWidth().height(48.dp), shape = RoundedCornerShape(14.dp)) {\n            Icon(Icons.Filled.Logout, contentDescription = null); Spacer(Modifier.width(8.dp)); Text("Sign out")\n        }
     }
 }
