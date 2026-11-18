@@ -22,6 +22,8 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import org.json.JSONArray
+import org.json.JSONObject
 
 private val Navy = Color(0xFF071A57)
 private val Blue = Color(0xFF155EEF)
@@ -38,10 +40,27 @@ class MainActivity : ComponentActivity() {
         val preferences = getSharedPreferences("updates_preferences", MODE_PRIVATE)
         val completed = preferences.getBoolean("onboarding_completed", false)
         val savedTopics = preferences.getStringSet("selected_topics", emptySet()) ?: emptySet()
+        val articleArray = JSONArray(preferences.getString("community_articles", "[]") ?: "[]")
+        val initialArticles = mutableListOf<CommunityArticle>()
+        for (index in 0 until articleArray.length()) {
+            val item = articleArray.optJSONObject(index) ?: continue
+            initialArticles.add(CommunityArticle(item.optString("id"), item.optString("title"),
+                item.optString("category"), item.optString("body"), item.optLong("publishedAt")))
+        }
         setContent {
             UpdatesApp(
                 showOnboardingInitially = !completed,
                 initialTopics = savedTopics,
+                initialArticles = initialArticles,
+                onArticlesChange = { articles ->
+                    val array = JSONArray()
+                    articles.forEach { article ->
+                        array.put(JSONObject().put("id", article.id).put("title", article.title)
+                            .put("category", article.category).put("body", article.body)
+                            .put("publishedAt", article.publishedAt))
+                    }
+                    preferences.edit().putString("community_articles", array.toString()).apply()
+                },
                 onOnboardingComplete = { topics ->
                     preferences.edit()
                         .putBoolean("onboarding_completed", true)
@@ -64,6 +83,8 @@ private data class Story(
 private fun UpdatesApp(
     showOnboardingInitially: Boolean,
     initialTopics: Set<String>,
+    initialArticles: List<CommunityArticle>,
+    onArticlesChange: (List<CommunityArticle>) -> Unit,
     onOnboardingComplete: (Set<String>) -> Unit
 ) {
     var showOnboarding by remember { mutableStateOf(showOnboardingInitially) }
@@ -72,6 +93,7 @@ private fun UpdatesApp(
     var query by remember { mutableStateOf("") }
     var saved by remember { mutableStateOf(setOf<String>()) }
     var savedBooks by remember { mutableStateOf(setOf<String>()) }
+    var communityArticles by remember { mutableStateOf(initialArticles) }
     var openedStory by remember { mutableStateOf<Story?>(null) }
     var selectedFeedCategory by remember { mutableStateOf("For You") }
 
@@ -124,6 +146,15 @@ private fun UpdatesApp(
                 onQueryChange = { query = it },
                 saved = saved,
                 savedBooks = savedBooks,
+                communityArticles = communityArticles,
+                onPublishArticle = { article ->
+                    communityArticles = listOf(article) + communityArticles
+                    onArticlesChange(communityArticles)
+                },
+                onDeleteArticle = { id ->
+                    communityArticles = communityArticles.filterNot { it.id == id }
+                    onArticlesChange(communityArticles)
+                },
                 onSaveBook = { key -> savedBooks = if (key in savedBooks) savedBooks - key else savedBooks + key },
                 onSave = { title ->
                     saved = if (title in saved) saved - title else saved + title
@@ -279,6 +310,9 @@ private fun MainDashboard(
     onQueryChange: (String) -> Unit,
     saved: Set<String>,
     savedBooks: Set<String>,
+    communityArticles: List<CommunityArticle>,
+    onPublishArticle: (CommunityArticle) -> Unit,
+    onDeleteArticle: (String) -> Unit,
     onSaveBook: (String) -> Unit,
     onSave: (String) -> Unit,
     stories: List<Story>,
@@ -292,14 +326,14 @@ private fun MainDashboard(
         containerColor = Page,
         bottomBar = {
             NavigationBar(containerColor = Color.White) {
-                listOf("Home", "Explore", "News", "Research", "Library", "Profile").forEach { tab ->
+                listOf("Home", "Explore", "News", "Research", "Library", "Write").forEach { tab ->
                     val icon = when (tab) {
                         "Home" -> Icons.Filled.Home
                         "Explore" -> Icons.Filled.Explore
                         "News" -> Icons.Filled.Article
                         "Research" -> Icons.Filled.Science
                         "Library" -> Icons.Filled.Bookmarks
-                        else -> Icons.Filled.Person
+                        else -> Icons.Filled.Edit
                     }
                     NavigationBarItem(
                         selected = selectedTab == tab,
@@ -319,7 +353,7 @@ private fun MainDashboard(
                 "News" -> NewsScreen()
                 "Research" -> ResearchScreen()
                 "Library" -> DigitalLibraryScreen(savedBooks, onSaveBook)
-                else -> ProfileScreen()
+                else -> ArticlePublishingScreen(communityArticles, onPublishArticle, onDeleteArticle)
             }
         }
     }
