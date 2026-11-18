@@ -348,6 +348,7 @@ private fun MainDashboard(
     communityArticles: List<CommunityArticle>,
     displayName: String,
     profileBio: String,
+    cloudProfileMessage: String,
     onProfileSave: (String, String) -> Unit,
     onPublishArticle: (CommunityArticle) -> Unit,
     onDeleteArticle: (String) -> Unit,
