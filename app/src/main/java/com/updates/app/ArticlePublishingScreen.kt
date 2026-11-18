@@ -37,7 +37,8 @@ fun ArticlePublishingScreen(
     authorName: String,
     onPublish: (CommunityArticle) -> Unit,
     onDelete: (String) -> Unit,
-    currentUserId: String = ""
+    currentUserId: String = "",
+    publishStatus: String = ""
 ) {
     var composing by remember { mutableStateOf(false) }
     var title by remember { mutableStateOf("") }
@@ -114,6 +115,10 @@ fun ArticlePublishingScreen(
                 Button(onClick = { composing = true }, shape = RoundedCornerShape(13.dp)) { Icon(Icons.Filled.Add, contentDescription = null); Spacer(Modifier.width(4.dp)); Text("Write") }
             }
             Spacer(Modifier.height(16.dp))
+            if (publishStatus.isNotBlank()) {
+                Text(publishStatus, color = Color(0xFF155EEF), fontSize = 12.sp)
+                Spacer(Modifier.height(8.dp))
+            }
             if (articles.isEmpty()) {
                 Column(Modifier.fillMaxWidth().weight(1f), horizontalAlignment = Alignment.CenterHorizontally, verticalArrangement = Arrangement.Center) {
                     Text("Your ideas belong here", color = Color(0xFF071A57), fontSize = 20.sp, fontWeight = FontWeight.Bold)
