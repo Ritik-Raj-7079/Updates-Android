@@ -117,6 +117,14 @@ private fun UpdatesApp(
     var cloudProfileMessage by remember { mutableStateOf("Syncing profile…") }
     var cloudArticleMessage by remember { mutableStateOf("Loading community…") }
 
+    DisposableEffect(userId) {
+        val registration = CloudArticleRepository.observe(
+            onChange = { articles -> communityArticles = articles; cloudArticleMessage = "Community is up to date" },
+            onError = { cloudArticleMessage = "Community unavailable: $it" }
+        )
+        onDispose { registration.remove() }
+    }
+
     LaunchedEffect(userId) {
         CloudProfileRepository.load(userId, onSuccess = { cloudName, cloudBio ->
             if (cloudName.isNotBlank()) { displayName = cloudName; profileBio = cloudBio; onProfileChange(cloudName, cloudBio) }
@@ -178,7 +186,10 @@ private fun UpdatesApp(
                 communityArticles = communityArticles,
                 displayName = displayName,
                 profileBio = profileBio,
-                cloudProfileMessage = cloudProfileMessage,\n                cloudArticleMessage = cloudArticleMessage,\n                currentUserId = userId,\n                onSignOut = onSignOut,
+                cloudProfileMessage = cloudProfileMessage,
+                cloudArticleMessage = cloudArticleMessage,
+                currentUserId = userId,
+                onSignOut = onSignOut,\n                cloudArticleMessage = cloudArticleMessage,\n                currentUserId = userId,\n                onSignOut = onSignOut,
                 onProfileSave = { name, bio ->
                     displayName = name
                     profileBio = bio
@@ -186,12 +197,15 @@ private fun UpdatesApp(
                     CloudProfileRepository.save(userId, userEmail, name, bio, onSuccess = { cloudProfileMessage = "Profile synced to cloud" }, onError = { cloudProfileMessage = "Cloud sync failed: $it" })
                 },
                 onPublishArticle = { article ->
-                    communityArticles = listOf(article) + communityArticles
-                    onArticlesChange(communityArticles)
+                    cloudArticleMessage = "Publishing article…"
+                    CloudArticleRepository.publish(article, userId,
+                        onSuccess = { cloudArticleMessage = "Article published to the community" },
+                        onError = { cloudArticleMessage = "Publish failed: $it" })
                 },
                 onDeleteArticle = { id ->
-                    communityArticles = communityArticles.filterNot { it.id == id }
-                    onArticlesChange(communityArticles)
+                    CloudArticleRepository.delete(id,
+                        onSuccess = { cloudArticleMessage = "Article deleted" },
+                        onError = { cloudArticleMessage = "Delete failed: $it" })
                 },
                 onSaveBook = { key -> savedBooks = if (key in savedBooks) savedBooks - key else savedBooks + key },
                 onSave = { title ->
@@ -352,6 +366,9 @@ private fun MainDashboard(
     displayName: String,
     profileBio: String,
     cloudProfileMessage: String,
+    cloudArticleMessage: String,
+    currentUserId: String,
+    onSignOut: () -> Unit,
     onProfileSave: (String, String) -> Unit,
     onPublishArticle: (CommunityArticle) -> Unit,
     onDeleteArticle: (String) -> Unit,
@@ -396,8 +413,8 @@ private fun MainDashboard(
                 "News" -> NewsScreen()
                 "Research" -> ResearchScreen()
                 "Library" -> DigitalLibraryScreen(savedBooks, onSaveBook)
-                "Profile" -> UserProfileScreen(displayName, profileBio, communityArticles.size, cloudProfileMessage, onProfileSave, { onTabSelected("Write") })
-                else -> ArticlePublishingScreen(communityArticles, displayName, onPublishArticle, onDeleteArticle)
+                "Profile" -> UserProfileScreen(displayName, profileBio, communityArticles.count { it.authorUid == currentUserId }, cloudProfileMessage, onProfileSave, { onTabSelected("Write") }, onSignOut)
+                else -> ArticlePublishingScreen(communityArticles, displayName, onPublishArticle, onDeleteArticle, currentUserId, cloudArticleMessage)
             }
         }
     }
@@ -619,7 +636,8 @@ private fun UserProfileScreen(
     articleCount: Int,
     cloudProfileMessage: String,
     onSave: (String, String) -> Unit,
-    onWrite: () -> Unit
+    onWrite: () -> Unit,
+    onSignOut: () -> Unit
 ) {
     var name by remember(displayName) { mutableStateOf(displayName) }
     var bio by remember(profileBio) { mutableStateOf(profileBio) }
@@ -650,6 +668,10 @@ private fun UserProfileScreen(
             Icon(Icons.Filled.Edit, contentDescription = null); Spacer(Modifier.width(8.dp)); Text("Write an article")
         }
         Spacer(Modifier.height(14.dp))
-        Text(cloudProfileMessage, color = Blue, fontSize = 11.sp, lineHeight = 16.sp)\n        Spacer(Modifier.height(16.dp))\n        OutlinedButton(onClick = onSignOut, modifier = Modifier.fillMaxWidth().height(48.dp), shape = RoundedCornerShape(14.dp)) {\n            Icon(Icons.Filled.Logout, contentDescription = null); Spacer(Modifier.width(8.dp)); Text("Sign out")\n        }
+        Text(cloudProfileMessage, color = Blue, fontSize = 11.sp, lineHeight = 16.sp)
+        Spacer(Modifier.height(16.dp))
+        OutlinedButton(onClick = onSignOut, modifier = Modifier.fillMaxWidth().height(48.dp), shape = RoundedCornerShape(14.dp)) {
+            Icon(Icons.Filled.Logout, contentDescription = null); Spacer(Modifier.width(8.dp)); Text("Sign out")
+        }\n        Spacer(Modifier.height(16.dp))\n        OutlinedButton(onClick = onSignOut, modifier = Modifier.fillMaxWidth().height(48.dp), shape = RoundedCornerShape(14.dp)) {\n            Icon(Icons.Filled.Logout, contentDescription = null); Spacer(Modifier.width(8.dp)); Text("Sign out")\n        }
     }
 }
