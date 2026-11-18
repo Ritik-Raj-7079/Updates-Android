@@ -27,7 +27,8 @@ data class CommunityArticle(
     val category: String,
     val body: String,
     val publishedAt: Long,
-    val authorName: String = "Reader"
+    val authorName: String = "Reader",
+    val authorUid: String = ""
 )
 
 @Composable
@@ -35,7 +36,8 @@ fun ArticlePublishingScreen(
     articles: List<CommunityArticle>,
     authorName: String,
     onPublish: (CommunityArticle) -> Unit,
-    onDelete: (String) -> Unit
+    onDelete: (String) -> Unit,
+    currentUserId: String = ""
 ) {
     var composing by remember { mutableStateOf(false) }
     var title by remember { mutableStateOf("") }
@@ -60,7 +62,7 @@ fun ArticlePublishingScreen(
                 Spacer(Modifier.height(18.dp))
                 Text(article.body, color = Color.DarkGray, fontSize = 16.sp, lineHeight = 27.sp)
                 Spacer(Modifier.height(18.dp))
-                Text("Published by ${article.authorName} · Stored on this device", color = Color.Gray, fontSize = 11.sp)
+                Text("Published by ${article.authorName} · UPDATES Community", color = Color.Gray, fontSize = 11.sp)
             }
         }
         return
@@ -93,14 +95,14 @@ fun ArticlePublishingScreen(
             Spacer(Modifier.height(12.dp))
             Button(
                 onClick = {
-                    onPublish(CommunityArticle(java.util.UUID.randomUUID().toString(), title.trim(), category, body.trim(), System.currentTimeMillis(), authorName))
+                    onPublish(CommunityArticle(java.util.UUID.randomUUID().toString(), title.trim(), category, body.trim(), System.currentTimeMillis(), authorName, currentUserId))
                     title = ""; body = ""; category = "Technology"; composing = false
                 },
                 enabled = title.trim().length >= 5 && body.trim().length >= 30,
                 modifier = Modifier.fillMaxWidth().height(52.dp),
                 shape = RoundedCornerShape(14.dp)
             ) { Icon(Icons.Filled.Send, contentDescription = null); Spacer(Modifier.width(8.dp)); Text("Publish article") }
-            Text("Publishing as $authorName · Saved locally on this device.", color = Color.Gray, fontSize = 10.sp, modifier = Modifier.padding(top = 8.dp))
+            Text("Publishing as $authorName · Shared with the UPDATES community.", color = Color.Gray, fontSize = 10.sp, modifier = Modifier.padding(top = 8.dp))
         }
     } else {
         Column(Modifier.fillMaxSize().background(Color(0xFFF5F7FC)).padding(horizontal = 18.dp, vertical = 16.dp)) {
@@ -121,7 +123,7 @@ fun ArticlePublishingScreen(
                     Button(onClick = { composing = true }) { Icon(Icons.Filled.Edit, contentDescription = null); Spacer(Modifier.width(6.dp)); Text("Create an article") }
                 }
             } else {
-                Text("YOUR PUBLISHED ARTICLES · ${articles.size}", color = Color(0xFF155EEF), fontSize = 10.sp, fontWeight = FontWeight.Bold)
+                Text("COMMUNITY ARTICLES · ${articles.size}", color = Color(0xFF155EEF), fontSize = 10.sp, fontWeight = FontWeight.Bold)
                 Spacer(Modifier.height(10.dp))
                 LazyColumn(verticalArrangement = Arrangement.spacedBy(10.dp)) {
                     items(articles, key = { it.id }) { article ->
@@ -133,9 +135,11 @@ fun ArticlePublishingScreen(
                                 Spacer(Modifier.height(5.dp))
                                 Text(article.body.take(150) + if (article.body.length > 150) "…" else "", color = Color.DarkGray, fontSize = 12.sp, lineHeight = 18.sp)
                                 Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
-                                    Text("On this device", color = Color.Gray, fontSize = 10.sp, modifier = Modifier.weight(1f))
+                                    Text("By ${article.authorName}", color = Color.Gray, fontSize = 10.sp, modifier = Modifier.weight(1f))
                                     TextButton(onClick = { selectedArticle = article }) { Text("Read") }
-                                    IconButton(onClick = { onDelete(article.id) }) { Icon(Icons.Filled.Delete, contentDescription = "Delete article", tint = Color(0xFFB42318)) }
+                                    if (article.authorUid == currentUserId && currentUserId.isNotBlank()) {
+                                        IconButton(onClick = { onDelete(article.id) }) { Icon(Icons.Filled.Delete, contentDescription = "Delete article", tint = Color(0xFFB42318)) }
+                                    }
                                 }
                             }
                         }
