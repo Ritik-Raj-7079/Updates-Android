@@ -50,6 +50,7 @@ class MainActivity : ComponentActivity() {
                 item.optString("category"), item.optString("body"), item.optLong("publishedAt"), item.optString("authorName", "Reader")) )
         }
         setContent {
+            AuthGate { _, onSignOut ->
             UpdatesApp(
                 showOnboardingInitially = !completed,
                 initialTopics = savedTopics,
@@ -75,6 +76,7 @@ class MainActivity : ComponentActivity() {
                         .apply()
                 }
             )
+            }
         }
     }
 }
