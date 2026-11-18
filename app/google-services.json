@@ -1,0 +1,29 @@
+{
+  "project_info": {
+    "project_number": "223084728040",
+    "project_id": "updates-9ade5",
+    "storage_bucket": "updates-9ade5.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:223084728040:android:faec76bea43ba07068835d",
+        "android_client_info": {
+          "package_name": "com.updates.app"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyCepmjeTvQdyQEHbY9pobr5EZKZFz6YGyc"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}
