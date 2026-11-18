@@ -50,13 +50,15 @@ class MainActivity : ComponentActivity() {
                 item.optString("category"), item.optString("body"), item.optLong("publishedAt"), item.optString("authorName", "Reader")) )
         }
         setContent {
-            AuthGate { _, onSignOut ->
+            AuthGate { firebaseUser, onSignOut ->
             UpdatesApp(
                 showOnboardingInitially = !completed,
                 initialTopics = savedTopics,
                 initialArticles = initialArticles,
                 initialDisplayName = displayName,
                 initialProfileBio = profileBio,
+                userId = firebaseUser.uid,
+                userEmail = firebaseUser.email ?: "",
                 onProfileChange = { name, bio ->
                     preferences.edit().putString("profile_name", name).putString("profile_bio", bio).apply()
                 },
@@ -95,6 +97,8 @@ private fun UpdatesApp(
     initialArticles: List<CommunityArticle>,
     initialDisplayName: String,
     initialProfileBio: String,
+    userId: String,
+    userEmail: String,
     onProfileChange: (String, String) -> Unit,
     onArticlesChange: (List<CommunityArticle>) -> Unit,
     onOnboardingComplete: (Set<String>) -> Unit
@@ -108,6 +112,14 @@ private fun UpdatesApp(
     var communityArticles by remember { mutableStateOf(initialArticles) }
     var displayName by remember { mutableStateOf(initialDisplayName) }
     var profileBio by remember { mutableStateOf(initialProfileBio) }
+    var cloudProfileMessage by remember { mutableStateOf("Syncing profile…") }
+
+    LaunchedEffect(userId) {
+        CloudProfileRepository.load(userId, onSuccess = { cloudName, cloudBio ->
+            if (cloudName.isNotBlank()) { displayName = cloudName; profileBio = cloudBio; onProfileChange(cloudName, cloudBio) }
+            cloudProfileMessage = "Cloud profile connected"
+        }, onError = { cloudProfileMessage = "Cloud sync unavailable: $it" })
+    }
     var openedStory by remember { mutableStateOf<Story?>(null) }
     var selectedFeedCategory by remember { mutableStateOf("For You") }
 
@@ -163,10 +175,12 @@ private fun UpdatesApp(
                 communityArticles = communityArticles,
                 displayName = displayName,
                 profileBio = profileBio,
+                cloudProfileMessage = cloudProfileMessage,
                 onProfileSave = { name, bio ->
                     displayName = name
                     profileBio = bio
                     onProfileChange(name, bio)
+                    CloudProfileRepository.save(userId, userEmail, name, bio, onSuccess = { cloudProfileMessage = "Profile synced to cloud" }, onError = { cloudProfileMessage = "Cloud sync failed: $it" })
                 },
                 onPublishArticle = { article ->
                     communityArticles = listOf(article) + communityArticles
@@ -378,7 +392,7 @@ private fun MainDashboard(
                 "News" -> NewsScreen()
                 "Research" -> ResearchScreen()
                 "Library" -> DigitalLibraryScreen(savedBooks, onSaveBook)
-                "Profile" -> UserProfileScreen(displayName, profileBio, communityArticles.size, onProfileSave, { onTabSelected("Write") })
+                "Profile" -> UserProfileScreen(displayName, profileBio, communityArticles.size, cloudProfileMessage, onProfileSave, { onTabSelected("Write") })
                 else -> ArticlePublishingScreen(communityArticles, displayName, onPublishArticle, onDeleteArticle)
             }
         }
@@ -599,6 +613,7 @@ private fun UserProfileScreen(
     displayName: String,
     profileBio: String,
     articleCount: Int,
+    cloudProfileMessage: String,
     onSave: (String, String) -> Unit,
     onWrite: () -> Unit
 ) {
@@ -631,6 +646,6 @@ private fun UserProfileScreen(
             Icon(Icons.Filled.Edit, contentDescription = null); Spacer(Modifier.width(8.dp)); Text("Write an article")
         }
         Spacer(Modifier.height(14.dp))
-        Text("Local profile · Cloud account sign-in will be added after secure backend setup.", color = Color.Gray, fontSize = 11.sp, lineHeight = 16.sp)
+        Text(cloudProfileMessage, color = Blue, fontSize = 11.sp, lineHeight = 16.sp)
     }
 }
