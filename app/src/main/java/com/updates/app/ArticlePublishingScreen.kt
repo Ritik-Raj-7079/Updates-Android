@@ -26,12 +26,14 @@ data class CommunityArticle(
     val title: String,
     val category: String,
     val body: String,
-    val publishedAt: Long
+    val publishedAt: Long,
+    val authorName: String = "Reader"
 )
 
 @Composable
 fun ArticlePublishingScreen(
     articles: List<CommunityArticle>,
+    authorName: String,
     onPublish: (CommunityArticle) -> Unit,
     onDelete: (String) -> Unit
 ) {
@@ -58,7 +60,7 @@ fun ArticlePublishingScreen(
                 Spacer(Modifier.height(18.dp))
                 Text(article.body, color = Color.DarkGray, fontSize = 16.sp, lineHeight = 27.sp)
                 Spacer(Modifier.height(18.dp))
-                Text("Published by You · Stored on this device", color = Color.Gray, fontSize = 11.sp)
+                Text("Published by ${article.authorName} · Stored on this device", color = Color.Gray, fontSize = 11.sp)
             }
         }
         return
@@ -91,14 +93,14 @@ fun ArticlePublishingScreen(
             Spacer(Modifier.height(12.dp))
             Button(
                 onClick = {
-                    onPublish(CommunityArticle(java.util.UUID.randomUUID().toString(), title.trim(), category, body.trim(), System.currentTimeMillis()))
+                    onPublish(CommunityArticle(java.util.UUID.randomUUID().toString(), title.trim(), category, body.trim(), System.currentTimeMillis(), authorName))
                     title = ""; body = ""; category = "Technology"; composing = false
                 },
                 enabled = title.trim().length >= 5 && body.trim().length >= 30,
                 modifier = Modifier.fillMaxWidth().height(52.dp),
                 shape = RoundedCornerShape(14.dp)
             ) { Icon(Icons.Filled.Send, contentDescription = null); Spacer(Modifier.width(8.dp)); Text("Publish article") }
-            Text("Your article is saved locally on this device in this version.", color = Color.Gray, fontSize = 10.sp, modifier = Modifier.padding(top = 8.dp))
+            Text("Publishing as $authorName · Saved locally on this device.", color = Color.Gray, fontSize = 10.sp, modifier = Modifier.padding(top = 8.dp))
         }
     } else {
         Column(Modifier.fillMaxSize().background(Color(0xFFF5F7FC)).padding(horizontal = 18.dp, vertical = 16.dp)) {
