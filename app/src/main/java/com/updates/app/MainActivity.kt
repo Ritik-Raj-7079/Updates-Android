@@ -348,13 +348,14 @@ private fun MainDashboard(
         containerColor = Page,
         bottomBar = {
             NavigationBar(containerColor = Color.White) {
-                listOf("Home", "Explore", "News", "Research", "Library", "Write").forEach { tab ->
+                listOf("Home", "Explore", "News", "Research", "Library", "Profile").forEach { tab ->
                     val icon = when (tab) {
                         "Home" -> Icons.Filled.Home
                         "Explore" -> Icons.Filled.Explore
                         "News" -> Icons.Filled.Article
                         "Research" -> Icons.Filled.Science
                         "Library" -> Icons.Filled.Bookmarks
+                        "Profile" -> Icons.Filled.Person
                         else -> Icons.Filled.Edit
                     }
                     NavigationBarItem(
@@ -375,7 +376,7 @@ private fun MainDashboard(
                 "News" -> NewsScreen()
                 "Research" -> ResearchScreen()
                 "Library" -> DigitalLibraryScreen(savedBooks, onSaveBook)
-                "Profile" -> UserProfileScreen(displayName, profileBio, communityArticles.size, onProfileSave)
+                "Profile" -> UserProfileScreen(displayName, profileBio, communityArticles.size, onProfileSave, { onTabSelected("Write") })
                 else -> ArticlePublishingScreen(communityArticles, displayName, onPublishArticle, onDeleteArticle)
             }
         }
@@ -592,16 +593,42 @@ private fun LibraryScreen(savedStories: List<Story>, onOpenStory: (Story) -> Uni
 }
 
 @Composable
-private fun OldProfileScreen() {
-    Column(Modifier.fillMaxSize().padding(20.dp), horizontalAlignment = Alignment.CenterHorizontally) {
-        Spacer(Modifier.height(28.dp))
-        Box(Modifier.size(82.dp).background(Navy, CircleShape), contentAlignment = Alignment.Center) {
-            Icon(Icons.Filled.Person, contentDescription = null, tint = Color.White, modifier = Modifier.size(42.dp))
+private fun UserProfileScreen(
+    displayName: String,
+    profileBio: String,
+    articleCount: Int,
+    onSave: (String, String) -> Unit,
+    onWrite: () -> Unit
+) {
+    var name by remember(displayName) { mutableStateOf(displayName) }
+    var bio by remember(profileBio) { mutableStateOf(profileBio) }
+    var savedMessage by remember { mutableStateOf(false) }
+    Column(Modifier.fillMaxSize().background(Page).padding(20.dp)) {
+        Text("My Profile", color = Navy, fontSize = 25.sp, fontWeight = FontWeight.ExtraBold)
+        Text("Your identity in the UPDATES community", color = Color.Gray, fontSize = 12.sp)
+        Spacer(Modifier.height(22.dp))
+        Box(Modifier.fillMaxWidth(), contentAlignment = Alignment.Center) {
+            Box(Modifier.size(86.dp).background(Navy, CircleShape), contentAlignment = Alignment.Center) {
+                Text(name.trim().take(1).uppercase().ifBlank { "U" }, color = Color.White, fontSize = 34.sp, fontWeight = FontWeight.Bold)
+            }
+        }
+        Spacer(Modifier.height(12.dp))
+        Text(name.ifBlank { "Knowledge Explorer" }, modifier = Modifier.fillMaxWidth(), textAlign = TextAlign.Center, color = Navy, fontSize = 20.sp, fontWeight = FontWeight.Bold)
+        Text("$articleCount community articles published", modifier = Modifier.fillMaxWidth(), textAlign = TextAlign.Center, color = Color.Gray, fontSize = 12.sp)
+        Spacer(Modifier.height(24.dp))
+        OutlinedTextField(value = name, onValueChange = { name = it; savedMessage = false }, modifier = Modifier.fillMaxWidth(), label = { Text("Display name") }, singleLine = true, shape = RoundedCornerShape(14.dp))
+        Spacer(Modifier.height(12.dp))
+        OutlinedTextField(value = bio, onValueChange = { bio = it; savedMessage = false }, modifier = Modifier.fillMaxWidth(), label = { Text("About you") }, placeholder = { Text("Share a little about your interests") }, minLines = 3, maxLines = 4, shape = RoundedCornerShape(14.dp))
+        Spacer(Modifier.height(14.dp))
+        Button(onClick = { onSave(name.trim().ifBlank { "Knowledge Explorer" }, bio.trim()); savedMessage = true }, enabled = name.isNotBlank(), modifier = Modifier.fillMaxWidth().height(50.dp), shape = RoundedCornerShape(14.dp)) {
+            Icon(Icons.Filled.Save, contentDescription = null); Spacer(Modifier.width(8.dp)); Text("Save profile")
+        }
+        if (savedMessage) Text("Profile saved on this device.", color = Color(0xFF16834A), fontSize = 12.sp, modifier = Modifier.padding(top = 8.dp))
+        Spacer(Modifier.height(12.dp))
+        OutlinedButton(onClick = onWrite, modifier = Modifier.fillMaxWidth().height(50.dp), shape = RoundedCornerShape(14.dp)) {
+            Icon(Icons.Filled.Edit, contentDescription = null); Spacer(Modifier.width(8.dp)); Text("Write an article")
         }
         Spacer(Modifier.height(14.dp))
-        Text("Welcome to UPDATES", color = Navy, fontSize = 21.sp, fontWeight = FontWeight.Bold)
-        Text("Your knowledge journey starts here.", color = Color.Gray, fontSize = 13.sp)
-        Spacer(Modifier.height(24.dp))
-        Text("Profile, interests and account settings will be added in upcoming milestones.", color = Color.DarkGray, fontSize = 14.sp)
+        Text("Local profile · Cloud account sign-in will be added after secure backend setup.", color = Color.Gray, fontSize = 11.sp, lineHeight = 16.sp)
     }
 }
