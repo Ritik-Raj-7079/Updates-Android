@@ -5,5 +5,28 @@ service cloud.firestore {
       allow read, create, update, delete: if request.auth != null
         && request.auth.uid == userId;
     }
+
+    match /communityArticles/{articleId} {
+      // Signed-in users can read published community articles.
+      allow read: if request.auth != null;
+
+      // A user can publish only under their own authenticated UID.
+      allow create: if request.auth != null
+        && request.resource.data.authorUid == request.auth.uid
+        && request.resource.data.title is string
+        && request.resource.data.title.size() >= 5
+        && request.resource.data.title.size() <= 120
+        && request.resource.data.body is string
+        && request.resource.data.body.size() >= 30
+        && request.resource.data.body.size() <= 20000
+        && request.resource.data.category is string
+        && request.resource.data.authorName is string;
+
+      // Only the original author can edit or delete their article.
+      allow update, delete: if request.auth != null
+        && resource.data.authorUid == request.auth.uid
+        && (request.method == 'delete'
+          || request.resource.data.authorUid == request.auth.uid);
+    }
   }
 }
