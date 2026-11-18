@@ -189,7 +189,7 @@ private fun UpdatesApp(
                 cloudProfileMessage = cloudProfileMessage,
                 cloudArticleMessage = cloudArticleMessage,
                 currentUserId = userId,
-                onSignOut = onSignOut,\n                cloudArticleMessage = cloudArticleMessage,\n                currentUserId = userId,\n                onSignOut = onSignOut,
+                onSignOut = onSignOut,
                 onProfileSave = { name, bio ->
                     displayName = name
                     profileBio = bio
@@ -672,6 +672,6 @@ private fun UserProfileScreen(
         Spacer(Modifier.height(16.dp))
         OutlinedButton(onClick = onSignOut, modifier = Modifier.fillMaxWidth().height(48.dp), shape = RoundedCornerShape(14.dp)) {
             Icon(Icons.Filled.Logout, contentDescription = null); Spacer(Modifier.width(8.dp)); Text("Sign out")
-        }\n        Spacer(Modifier.height(16.dp))\n        OutlinedButton(onClick = onSignOut, modifier = Modifier.fillMaxWidth().height(48.dp), shape = RoundedCornerShape(14.dp)) {\n            Icon(Icons.Filled.Logout, contentDescription = null); Spacer(Modifier.width(8.dp)); Text("Sign out")\n        }
+        }
     }
 }
