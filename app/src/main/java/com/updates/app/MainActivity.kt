@@ -38,6 +38,8 @@ class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         val preferences = getSharedPreferences("updates_preferences", MODE_PRIVATE)
+        val displayName = preferences.getString("profile_name", "Knowledge Explorer") ?: "Knowledge Explorer"
+        val profileBio = preferences.getString("profile_bio", "") ?: ""
         val completed = preferences.getBoolean("onboarding_completed", false)
         val savedTopics = preferences.getStringSet("selected_topics", emptySet()) ?: emptySet()
         val articleArray = JSONArray(preferences.getString("community_articles", "[]") ?: "[]")
@@ -45,19 +47,24 @@ class MainActivity : ComponentActivity() {
         for (index in 0 until articleArray.length()) {
             val item = articleArray.optJSONObject(index) ?: continue
             initialArticles.add(CommunityArticle(item.optString("id"), item.optString("title"),
-                item.optString("category"), item.optString("body"), item.optLong("publishedAt")))
+                item.optString("category"), item.optString("body"), item.optLong("publishedAt"), item.optString("authorName", "Reader")) )
         }
         setContent {
             UpdatesApp(
                 showOnboardingInitially = !completed,
                 initialTopics = savedTopics,
                 initialArticles = initialArticles,
+                initialDisplayName = displayName,
+                initialProfileBio = profileBio,
+                onProfileChange = { name, bio ->
+                    preferences.edit().putString("profile_name", name).putString("profile_bio", bio).apply()
+                },
                 onArticlesChange = { articles ->
                     val array = JSONArray()
                     articles.forEach { article ->
                         array.put(JSONObject().put("id", article.id).put("title", article.title)
                             .put("category", article.category).put("body", article.body)
-                            .put("publishedAt", article.publishedAt))
+                            .put("publishedAt", article.publishedAt).put("authorName", article.authorName))
                     }
                     preferences.edit().putString("community_articles", array.toString()).apply()
                 },
@@ -84,6 +91,9 @@ private fun UpdatesApp(
     showOnboardingInitially: Boolean,
     initialTopics: Set<String>,
     initialArticles: List<CommunityArticle>,
+    initialDisplayName: String,
+    initialProfileBio: String,
+    onProfileChange: (String, String) -> Unit,
     onArticlesChange: (List<CommunityArticle>) -> Unit,
     onOnboardingComplete: (Set<String>) -> Unit
 ) {
@@ -94,6 +104,8 @@ private fun UpdatesApp(
     var saved by remember { mutableStateOf(setOf<String>()) }
     var savedBooks by remember { mutableStateOf(setOf<String>()) }
     var communityArticles by remember { mutableStateOf(initialArticles) }
+    var displayName by remember { mutableStateOf(initialDisplayName) }
+    var profileBio by remember { mutableStateOf(initialProfileBio) }
     var openedStory by remember { mutableStateOf<Story?>(null) }
     var selectedFeedCategory by remember { mutableStateOf("For You") }
 
@@ -147,6 +159,13 @@ private fun UpdatesApp(
                 saved = saved,
                 savedBooks = savedBooks,
                 communityArticles = communityArticles,
+                displayName = displayName,
+                profileBio = profileBio,
+                onProfileSave = { name, bio ->
+                    displayName = name
+                    profileBio = bio
+                    onProfileChange(name, bio)
+                },
                 onPublishArticle = { article ->
                     communityArticles = listOf(article) + communityArticles
                     onArticlesChange(communityArticles)
@@ -311,6 +330,9 @@ private fun MainDashboard(
     saved: Set<String>,
     savedBooks: Set<String>,
     communityArticles: List<CommunityArticle>,
+    displayName: String,
+    profileBio: String,
+    onProfileSave: (String, String) -> Unit,
     onPublishArticle: (CommunityArticle) -> Unit,
     onDeleteArticle: (String) -> Unit,
     onSaveBook: (String) -> Unit,
@@ -348,12 +370,13 @@ private fun MainDashboard(
     ) { padding ->
         Column(Modifier.fillMaxSize().padding(padding)) {
             when (selectedTab) {
-                "Home" -> HomeScreen(stories, query, onQueryChange, saved, onSave, selectedTopics, selectedFeedCategory, onFeedCategoryChange, onOpenStory)
+                "Home" -> HomeScreen(stories, query, onQueryChange, saved, onSave, selectedTopics, selectedFeedCategory, onFeedCategoryChange, onOpenStory, { onTabSelected("Profile") })
                 "Explore" -> KnowledgeExploreScreen(onExploreCategory)
                 "News" -> NewsScreen()
                 "Research" -> ResearchScreen()
                 "Library" -> DigitalLibraryScreen(savedBooks, onSaveBook)
-                else -> ArticlePublishingScreen(communityArticles, onPublishArticle, onDeleteArticle)
+                "Profile" -> UserProfileScreen(displayName, profileBio, communityArticles.size, onProfileSave)
+                else -> ArticlePublishingScreen(communityArticles, displayName, onPublishArticle, onDeleteArticle)
             }
         }
     }
@@ -369,7 +392,8 @@ private fun HomeScreen(
     selectedTopics: Set<String>,
     selectedFeedCategory: String,
     onFeedCategoryChange: (String) -> Unit,
-    onOpenStory: (Story) -> Unit
+    onOpenStory: (Story) -> Unit,
+    onProfileClick: () -> Unit
 ) {
     val feedCategories = listOf("For You", "News", "Research", "Stories") + Topics
     LazyColumn(
@@ -385,8 +409,8 @@ private fun HomeScreen(
                     Text("UPDATES", color = Navy, fontWeight = FontWeight.ExtraBold, fontSize = 19.sp, letterSpacing = 1.sp)
                     Text("Build Your Own Treasure of Knowledge.", color = Color.Gray, fontSize = 10.sp)
                 }
-                IconButton(onClick = {}) {
-                    Icon(Icons.Filled.NotificationsNone, contentDescription = "Notifications", tint = Navy)
+                IconButton(onClick = onProfileClick) {
+                    Icon(Icons.Filled.AccountCircle, contentDescription = "Profile", tint = Navy)
                 }
             }
         }
@@ -568,7 +592,7 @@ private fun LibraryScreen(savedStories: List<Story>, onOpenStory: (Story) -> Uni
 }
 
 @Composable
-private fun ProfileScreen() {
+private fun OldProfileScreen() {
     Column(Modifier.fillMaxSize().padding(20.dp), horizontalAlignment = Alignment.CenterHorizontally) {
         Spacer(Modifier.height(28.dp))
         Box(Modifier.size(82.dp).background(Navy, CircleShape), contentAlignment = Alignment.Center) {
