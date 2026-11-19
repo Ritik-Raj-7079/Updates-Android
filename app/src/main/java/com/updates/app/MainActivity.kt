@@ -91,6 +91,11 @@ class MainActivity : ComponentActivity() {
                     preferences.edit().putStringSet("saved_story_titles", storySet.toSet())
                         .putStringSet("saved_book_keys", bookSet.toSet())
                         .putString("reading_history", JSONArray(history).toString()).apply()
+                    CloudReadingRepository.save(
+                        firebaseUser.uid,
+                        CloudReadingData(storySet, bookSet, history),
+                        onError = { android.util.Log.w("UPDATES_SYNC", it) }
+                    )
                 }
             )
             }
@@ -144,6 +149,15 @@ private fun UpdatesApp(
             onError = { cloudArticleMessage = "Community unavailable: $it" }
         )
         onDispose { registration.remove() }
+    }
+
+    LaunchedEffect(userId) {
+        CloudReadingRepository.load(userId, onSuccess = { cloudData ->
+            saved = cloudData.savedStories
+            savedBooks = cloudData.savedBooks
+            readingHistory = cloudData.history
+            onReadingDataChange(saved, savedBooks, readingHistory)
+        }, onError = { android.util.Log.w("UPDATES_SYNC", it) })
     }
 
     LaunchedEffect(userId) {
