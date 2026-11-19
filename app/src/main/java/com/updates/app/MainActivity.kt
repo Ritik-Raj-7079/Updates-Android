@@ -125,6 +125,7 @@ private fun UpdatesApp(
     var selectedTopics by remember { mutableStateOf(initialTopics) }
     var selectedTab by remember { mutableStateOf("Home") }
     var showExitDialog by remember { mutableStateOf(false) }
+    val appContext = androidx.compose.ui.platform.LocalContext.current
     var query by remember { mutableStateOf("") }
     var saved by remember { mutableStateOf(initialSavedStories) }
     var savedBooks by remember { mutableStateOf(initialSavedBooks) }
@@ -188,7 +189,7 @@ private fun UpdatesApp(
                 title = { Text("Exit UPDATES?") },
                 text = { Text("Are you sure you want to close the app?") },
                 confirmButton = {
-                    TextButton(onClick = { showExitDialog = false; (androidx.compose.ui.platform.LocalContext.current as? android.app.Activity)?.finish() }) {
+                    TextButton(onClick = { showExitDialog = false; (appContext as? android.app.Activity)?.finish() }) {
                         Text("Exit", color = Blue)
                     }
                 },
