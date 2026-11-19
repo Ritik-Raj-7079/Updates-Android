@@ -422,53 +422,57 @@ private fun MainDashboard(
 
 @Composable
 private fun HomeScreen(
-    stories: List<Story>,
-    query: String,
-    onQuery: (String) -> Unit,
-    saved: Set<String>,
-    onSave: (String) -> Unit,
-    selectedTopics: Set<String>,
-    selectedFeedCategory: String,
-    onFeedCategoryChange: (String) -> Unit,
-    onOpenStory: (Story) -> Unit,
-    onProfileClick: () -> Unit
+    stories: List<Story>, query: String, onQuery: (String) -> Unit,
+    saved: Set<String>, onSave: (String) -> Unit, selectedTopics: Set<String>,
+    selectedFeedCategory: String, onFeedCategoryChange: (String) -> Unit,
+    onOpenStory: (Story) -> Unit, onProfileClick: () -> Unit
 ) {
     val feedCategories = listOf("For You", "News", "Research", "Stories") + Topics
+    val filtered = stories.filter {
+        val matchesSearch = query.isBlank() || it.title.contains(query, true) || it.category.contains(query, true) || it.summary.contains(query, true)
+        val matchesInterest = selectedFeedCategory != "For You" || selectedTopics.isEmpty() || it.category.lowercase() in selectedTopics.map { t -> t.lowercase() }
+        val matchesFeed = when (selectedFeedCategory) {
+            "For You" -> true
+            "Stories" -> it.category == "HISTORY" || it.category == "LITERATURE"
+            else -> it.category.equals(selectedFeedCategory, true)
+        }
+        matchesSearch && matchesInterest && matchesFeed
+    }
     LazyColumn(
         modifier = Modifier.fillMaxSize(),
-        contentPadding = PaddingValues(horizontal = 20.dp, vertical = 18.dp),
-        verticalArrangement = Arrangement.spacedBy(16.dp)
+        contentPadding = PaddingValues(horizontal = 18.dp, vertical = 14.dp),
+        verticalArrangement = Arrangement.spacedBy(15.dp)
     ) {
         item {
             Row(verticalAlignment = Alignment.CenterVertically) {
-                BrandMark(42)
-                Spacer(Modifier.width(11.dp))
+                BrandMark(40); Spacer(Modifier.width(10.dp))
                 Column(Modifier.weight(1f)) {
-                    Text("UPDATES", color = Navy, fontWeight = FontWeight.ExtraBold, fontSize = 19.sp, letterSpacing = 1.sp)
-                    Text("Build Your Own Treasure of Knowledge.", color = Color.Gray, fontSize = 10.sp)
+                    Text("UPDATES", color = Navy, fontWeight = FontWeight.ExtraBold, fontSize = 19.sp, letterSpacing = 1.2.sp)
+                    Text("Your space for ideas & discovery", color = Color.Gray, fontSize = 10.sp)
                 }
-                IconButton(onClick = onProfileClick) {
-                    Icon(Icons.Filled.AccountCircle, contentDescription = "Profile", tint = Navy)
-                }
+                IconButton(onClick = onProfileClick) { Icon(Icons.Filled.AccountCircle, contentDescription = "Profile", tint = Navy) }
             }
         }
         item {
-            Column(Modifier.fillMaxWidth().background(Navy, RoundedCornerShape(22.dp)).padding(20.dp)) {
-                Text("YOUR DAILY DOSE OF KNOWLEDGE", color = Orange, fontSize = 10.sp, fontWeight = FontWeight.Bold, letterSpacing = 1.sp)
+            Column(Modifier.fillMaxWidth().background(Navy, RoundedCornerShape(24.dp)).padding(21.dp)) {
+                Text("THE KNOWLEDGE JOURNEY", color = Orange, fontSize = 10.sp, fontWeight = FontWeight.Bold, letterSpacing = 1.4.sp)
                 Spacer(Modifier.height(8.dp))
-                Text("Discover something\nnew every day.", color = Color.White, fontSize = 25.sp, fontWeight = FontWeight.Bold, lineHeight = 31.sp)
-                Spacer(Modifier.height(8.dp))
-                Text("Ideas, discoveries and stories worth your time.", color = Color(0xFFDCE5FF), fontSize = 13.sp)
+                Text("Ideas worth reading.\nKnowledge worth keeping.", color = Color.White, fontSize = 26.sp, fontWeight = FontWeight.ExtraBold, lineHeight = 32.sp)
+                Spacer(Modifier.height(9.dp))
+                Text("Discover new perspectives, one story at a time.", color = Color(0xFFDCE5FF), fontSize = 13.sp)
+                Spacer(Modifier.height(15.dp))
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    Icon(Icons.Filled.AutoStories, null, tint = Orange, modifier = Modifier.size(18.dp))
+                    Spacer(Modifier.width(7.dp))
+                    Text("Read · Explore · Save · Learn", color = Color.White, fontSize = 11.sp, fontWeight = FontWeight.SemiBold)
+                }
             }
         }
         item {
             OutlinedTextField(
-                value = query,
-                onValueChange = onQuery,
-                modifier = Modifier.fillMaxWidth(),
-                placeholder = { Text("Search topics, stories and research") },
-                leadingIcon = { Icon(Icons.Filled.Search, contentDescription = null) },
-                singleLine = true,
+                value = query, onValueChange = onQuery, modifier = Modifier.fillMaxWidth(),
+                placeholder = { Text("Search ideas, topics and stories") },
+                leadingIcon = { Icon(Icons.Filled.Search, null) }, singleLine = true,
                 shape = RoundedCornerShape(16.dp),
                 colors = OutlinedTextFieldDefaults.colors(unfocusedContainerColor = Color.White, focusedContainerColor = Color.White)
             )
@@ -481,35 +485,44 @@ private fun HomeScreen(
             }
         }
         item {
-            SectionTitle(
-                if (selectedFeedCategory == "For You") "Recommended for you" else selectedFeedCategory,
-                if (selectedTopics.isEmpty()) "A little knowledge for every curious mind"
-                else "Your interests: " + selectedTopics.take(3).joinToString(", ")
-            )
+            SectionTitle(if (selectedFeedCategory == "For You") "Editor's picks" else selectedFeedCategory,
+                if (selectedTopics.isEmpty()) "Handpicked ideas for curious minds" else "Your interests · " + selectedTopics.take(3).joinToString(" · "))
         }
-        val filtered = stories.filter {
-            val matchesSearch = query.isBlank() || it.title.contains(query, true) || it.category.contains(query, true) || it.summary.contains(query, true)
-            val matchesInterest = selectedFeedCategory != "For You" || selectedTopics.isEmpty() || it.category.lowercase() in selectedTopics.map { topic -> topic.lowercase() }
-            val matchesFeed = when (selectedFeedCategory) {
-                "For You" -> true
-                "Stories" -> it.category == "HISTORY" || it.category == "LITERATURE"
-                else -> it.category.equals(selectedFeedCategory, ignoreCase = true)
+        if (filtered.isNotEmpty()) {
+            item {
+                val featured = filtered.first()
+                Column(Modifier.fillMaxWidth().background(Color.White, RoundedCornerShape(22.dp)).clickable { onOpenStory(featured) }) {
+                    Box(Modifier.fillMaxWidth().height(132.dp).background(Blue, RoundedCornerShape(topStart = 22.dp, topEnd = 22.dp)), contentAlignment = Alignment.Center) {
+                        Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                            Icon(Icons.Filled.AutoStories, null, tint = Color.White, modifier = Modifier.size(40.dp))
+                            Spacer(Modifier.height(5.dp))
+                            Text("FEATURED READING", color = Color.White, fontSize = 10.sp, fontWeight = FontWeight.Bold, letterSpacing = 1.5.sp)
+                        }
+                    }
+                    Column(Modifier.padding(16.dp)) {
+                        Text(featured.category, color = Blue, fontSize = 10.sp, fontWeight = FontWeight.Bold, letterSpacing = 1.sp)
+                        Spacer(Modifier.height(6.dp))
+                        Text(featured.title, color = Navy, fontSize = 20.sp, lineHeight = 25.sp, fontWeight = FontWeight.ExtraBold)
+                        Spacer(Modifier.height(6.dp))
+                        Text(featured.summary, color = Color.DarkGray, fontSize = 13.sp, lineHeight = 19.sp, maxLines = 3)
+                        Spacer(Modifier.height(12.dp))
+                        Row(verticalAlignment = Alignment.CenterVertically) {
+                            Text(featured.readTime, color = Color.Gray, fontSize = 11.sp)
+                            Spacer(Modifier.weight(1f))
+                            Text("Start reading →", color = Blue, fontWeight = FontWeight.Bold, fontSize = 12.sp)
+                        }
+                    }
+                }
             }
-            matchesSearch && matchesInterest && matchesFeed
-        }
-        if (filtered.isEmpty()) {
-            item { Text("No matching stories yet. Try another search or update your interests.", color = Color.Gray) }
-        } else {
-            items(filtered) { story ->
+            items(filtered.drop(1)) { story ->
                 StoryCard(story, story.title in saved, onSave = { onSave(story.title) }, onOpen = { onOpenStory(story) })
             }
+        } else {
+            item { Text("No matching reads yet. Try a different category or search.", color = Color.Gray) }
         }
-        item {
-            Text("More knowledge. More perspectives. Every day.", color = Blue, fontSize = 12.sp, fontWeight = FontWeight.SemiBold, modifier = Modifier.padding(vertical = 8.dp))
-        }
+        item { Text("Curiosity has no finish line.", color = Blue, fontSize = 12.sp, fontWeight = FontWeight.SemiBold, modifier = Modifier.padding(vertical = 8.dp)) }
     }
 }
-
 @Composable
 private fun SectionTitle(title: String, subtitle: String) {
     Column {
@@ -520,51 +533,80 @@ private fun SectionTitle(title: String, subtitle: String) {
 
 @Composable
 private fun StoryCard(story: Story, isSaved: Boolean, onSave: () -> Unit, onOpen: () -> Unit) {
-    Column(Modifier.fillMaxWidth().background(Color.White, RoundedCornerShape(18.dp)).padding(16.dp)) {
+    Column(Modifier.fillMaxWidth().background(Color.White, RoundedCornerShape(20.dp)).clickable { onOpen() }.padding(16.dp)) {
         Row(verticalAlignment = Alignment.CenterVertically) {
-            Text(story.category, color = Blue, fontSize = 10.sp, fontWeight = FontWeight.Bold, modifier = Modifier.weight(1f))
-            IconButton(onClick = onSave, modifier = Modifier.size(32.dp)) {
-                Icon(if (isSaved) Icons.Filled.Bookmark else Icons.Filled.BookmarkBorder, contentDescription = "Save story", tint = Blue)
+            Box(Modifier.background(Color(0xFFEAF0FF), RoundedCornerShape(8.dp)).padding(horizontal = 9.dp, vertical = 5.dp)) {
+                Text(story.category, color = Blue, fontSize = 10.sp, fontWeight = FontWeight.Bold, letterSpacing = .6.sp)
+            }
+            Spacer(Modifier.weight(1f))
+            IconButton(onClick = onSave, modifier = Modifier.size(34.dp)) {
+                Icon(if (isSaved) Icons.Filled.Bookmark else Icons.Filled.BookmarkBorder, contentDescription = if (isSaved) "Remove bookmark" else "Save article", tint = Blue)
             }
         }
-        Text(story.title, color = Navy, fontSize = 17.sp, fontWeight = FontWeight.Bold, lineHeight = 22.sp, modifier = Modifier.clickable { onOpen() })
-        Spacer(Modifier.height(6.dp))
-        Text(story.summary, color = Color.DarkGray, fontSize = 13.sp, lineHeight = 19.sp)
-        Spacer(Modifier.height(12.dp))
+        Spacer(Modifier.height(5.dp))
+        Text(story.title, color = Navy, fontSize = 18.sp, fontWeight = FontWeight.Bold, lineHeight = 24.sp)
+        Spacer(Modifier.height(7.dp))
+        Text(story.summary, color = Color(0xFF4B5563), fontSize = 13.sp, lineHeight = 20.sp, maxLines = 3)
+        Spacer(Modifier.height(13.dp))
         Row(verticalAlignment = Alignment.CenterVertically) {
+            Icon(Icons.Filled.Schedule, null, tint = Color.Gray, modifier = Modifier.size(14.dp))
+            Spacer(Modifier.width(4.dp))
             Text(story.readTime, color = Color.Gray, fontSize = 11.sp)
             Spacer(Modifier.weight(1f))
-            Text("Read more  →", color = Blue, fontSize = 12.sp, fontWeight = FontWeight.SemiBold, modifier = Modifier.clickable { onOpen() })
+            Text(if (isSaved) "Saved" else "Read story", color = Blue, fontSize = 12.sp, fontWeight = FontWeight.SemiBold)
+            Spacer(Modifier.width(5.dp))
+            Icon(Icons.Filled.ArrowForward, null, tint = Blue, modifier = Modifier.size(15.dp))
         }
     }
 }
-
 @Composable
 private fun ArticleReaderScreen(story: Story, isSaved: Boolean, onBack: () -> Unit, onSave: () -> Unit) {
-    Column(Modifier.fillMaxSize().background(Page)) {
-        Row(Modifier.fillMaxWidth().background(Color.White).padding(8.dp), verticalAlignment = Alignment.CenterVertically) {
-            IconButton(onClick = onBack) { Icon(Icons.Filled.ArrowBack, contentDescription = "Back", tint = Navy) }
-            Text("READING", color = Navy, fontWeight = FontWeight.Bold, modifier = Modifier.weight(1f))
-            IconButton(onClick = onSave) { Icon(if (isSaved) Icons.Filled.Bookmark else Icons.Filled.BookmarkBorder, contentDescription = "Bookmark", tint = Blue) }
+    var fontSize by remember { mutableFloatStateOf(17f) }
+    var readingTheme by remember { mutableStateOf(0) }
+    val backgrounds = listOf(Page, Color(0xFF17191C), Color(0xFFF2E8D5))
+    val foreground = if (readingTheme == 1) Color(0xFFE8E8E8) else Navy
+    val bodyColor = if (readingTheme == 1) Color(0xFFCCCCCC) else Color(0xFF303846)
+    Column(Modifier.fillMaxSize().background(backgrounds[readingTheme])) {
+        Row(Modifier.fillMaxWidth().background(if (readingTheme == 1) Color(0xFF222429) else Color.White).padding(horizontal = 7.dp, vertical = 4.dp), verticalAlignment = Alignment.CenterVertically) {
+            IconButton(onClick = onBack) { Icon(Icons.Filled.ArrowBack, "Back", tint = foreground) }
+            Text("UPDATES READER", color = foreground, fontWeight = FontWeight.Bold, fontSize = 12.sp, modifier = Modifier.weight(1f))
+            IconButton(onClick = onSave) { Icon(if (isSaved) Icons.Filled.Bookmark else Icons.Filled.BookmarkBorder, "Bookmark", tint = Blue) }
+            IconButton(onClick = { readingTheme = (readingTheme + 1) % backgrounds.size }) { Icon(Icons.Filled.Palette, "Reading theme", tint = foreground) }
         }
-        Column(Modifier.fillMaxSize().padding(22.dp)) {
-            Text(story.category, color = Blue, fontSize = 11.sp, fontWeight = FontWeight.Bold, letterSpacing = 1.sp)
-            Spacer(Modifier.height(12.dp))
-            Text(story.title, color = Navy, fontSize = 27.sp, lineHeight = 34.sp, fontWeight = FontWeight.ExtraBold)
-            Spacer(Modifier.height(12.dp))
-            Text(story.readTime, color = Color.Gray, fontSize = 12.sp)
-            Spacer(Modifier.height(22.dp))
-            HorizontalDivider(color = Color(0xFFE3E8F2))
-            Spacer(Modifier.height(22.dp))
-            Text(story.summary, color = Color.DarkGray, fontSize = 16.sp, lineHeight = 26.sp, fontWeight = FontWeight.Medium)
-            Spacer(Modifier.height(18.dp))
-            Text("Why this topic matters", color = Navy, fontSize = 19.sp, fontWeight = FontWeight.Bold)
-            Spacer(Modifier.height(8.dp))
-            Text("Knowledge grows when we stay curious, ask thoughtful questions and explore reliable information. This introduction is a starting point for understanding the topic and discovering the ideas behind it.", color = Color.DarkGray, fontSize = 15.sp, lineHeight = 25.sp)
-            Spacer(Modifier.height(16.dp))
-            Text("Keep exploring", color = Navy, fontSize = 19.sp, fontWeight = FontWeight.Bold)
-            Spacer(Modifier.height(8.dp))
-            Text("Use the Explore section to discover related subjects. Save this reading to return to it later.", color = Color.DarkGray, fontSize = 15.sp, lineHeight = 25.sp)
+        Row(Modifier.fillMaxWidth().padding(horizontal = 20.dp, vertical = 8.dp), verticalAlignment = Alignment.CenterVertically) {
+            Text("Text size", color = bodyColor, fontSize = 12.sp)
+            Spacer(Modifier.weight(1f))
+            IconButton(onClick = { fontSize = (fontSize - 1f).coerceAtLeast(14f }, modifier = Modifier.size(36.dp)) { Icon(Icons.Filled.Remove, "Decrease text", tint = Blue) }
+            Text("${fontSize.toInt()} sp", color = bodyColor, fontSize = 12.sp)
+            IconButton(onClick = { fontSize = (fontSize + 1f).coerceAtMost(26f }, modifier = Modifier.size(36.dp)) { Icon(Icons.Filled.Add, "Increase text", tint = Blue) }
+        }
+        LazyColumn(Modifier.fillMaxSize(), contentPadding = PaddingValues(horizontal = 24.dp, vertical = 18.dp), verticalArrangement = Arrangement.spacedBy(16.dp)) {
+            item {
+                Text(story.category, color = Blue, fontSize = 11.sp, fontWeight = FontWeight.Bold, letterSpacing = 1.2.sp)
+                Text(story.title, color = foreground, fontSize = 29.sp, lineHeight = 36.sp, fontWeight = FontWeight.ExtraBold)
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    Icon(Icons.Filled.Schedule, null, tint = bodyColor, modifier = Modifier.size(14.dp))
+                    Spacer(Modifier.width(5.dp))
+                    Text(story.readTime, color = bodyColor, fontSize = 12.sp)
+                }
+                HorizontalDivider(color = if (readingTheme == 1) Color.DarkGray else Color(0xFFDCE3EF))
+            }
+            item {
+                Text(story.summary, color = bodyColor, fontSize = fontSize.sp, lineHeight = (fontSize * 1.65f).sp)
+                Spacer(Modifier.height(5.dp))
+                Text("Why this topic matters", color = foreground, fontSize = 20.sp, fontWeight = FontWeight.Bold)
+                Text("Knowledge grows when we stay curious, ask thoughtful questions and explore reliable information. This introduction is a starting point for understanding the topic and discovering the ideas behind it.", color = bodyColor, fontSize = fontSize.sp, lineHeight = (fontSize * 1.65f).sp)
+                Text("Keep exploring", color = foreground, fontSize = 20.sp, fontWeight = FontWeight.Bold)
+                Text("Use the Explore section to discover related subjects. Save this reading to return to it later.", color = bodyColor, fontSize = fontSize.sp, lineHeight = (fontSize * 1.65f).sp)
+            }
+            item {
+                Row(Modifier.fillMaxWidth().background(if (readingTheme == 1) Color(0xFF24262A) else Color.White, RoundedCornerShape(14.dp)).padding(14.dp), verticalAlignment = Alignment.CenterVertically) {
+                    Icon(Icons.Filled.Bookmark, null, tint = Blue)
+                    Spacer(Modifier.width(9.dp))
+                    Text(if (isSaved) "Saved to your library" else "Save this reading to revisit later", color = bodyColor, fontSize = 13.sp, modifier = Modifier.weight(1f))
+                    TextButton(onClick = onSave) { Text(if (isSaved) "Saved" else "Save") }
+                }
+            }
         }
     }
 }
