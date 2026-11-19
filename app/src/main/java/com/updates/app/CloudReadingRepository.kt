@@ -56,22 +56,23 @@ object CloudReadingRepository {
             onError("Sign in to sync reading progress.")
             return
         }
-        val safeKey = title.take(120)
-        db.collection("users").document(uid).collection("privateData").document("reading")
-            .update("storyProgress.$safeKey", position.coerceAtLeast(0),
-                "updatedAt", com.google.firebase.firestore.FieldValue.serverTimestamp())
-            .addOnFailureListener { error ->
-                // A missing reading document is created with the progress map.
-                val payload = hashMapOf(
-                    "storyProgress" to mapOf(safeKey to position.coerceAtLeast(0)),
-                    "updatedAt" to com.google.firebase.firestore.FieldValue.serverTimestamp()
-                )
-                db.collection("users").document(uid).collection("privateData").document("reading")
-                    .set(payload, SetOptions.merge())
-                    .addOnFailureListener { retryError ->
-                        onError(retryError.localizedMessage ?: error.localizedMessage ?: "Could not sync reading progress.")
-                    }
-            }
+        val document = db.collection("users").document(uid)
+            .collection("privateData").document("reading")
+        db.runTransaction { transaction ->
+            val snapshot = transaction.get(document)
+            val progress = (snapshot.get("storyProgress") as? Map<*, *>)?.mapNotNull { (key, value) ->
+                if (key is String && value is Number) key to value.toInt().coerceAtLeast(0) else null
+            }?.toMutableMap() ?: mutableMapOf()
+            // Keep the original title as the map key; transaction safely handles
+            // punctuation and concurrent progress updates from another device.
+            progress[title.take(120)] = position.coerceAtLeast(0)
+            transaction.set(document, mapOf(
+                "storyProgress" to progress,
+                "updatedAt" to com.google.firebase.firestore.FieldValue.serverTimestamp()
+            ), SetOptions.merge())
+            null
+        }.addOnFailureListener { error ->
+            onError(error.localizedMessage ?: "Could not sync reading progress.")
+        }
     }
-
 }
