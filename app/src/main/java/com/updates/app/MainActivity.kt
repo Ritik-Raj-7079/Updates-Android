@@ -19,6 +19,7 @@ import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
@@ -392,14 +393,11 @@ private fun BrandMark(size: Int) {
         modifier = Modifier.size(size.dp).background(Navy, RoundedCornerShape((size / 4).dp)),
         contentAlignment = Alignment.Center
     ) {
-        Column(horizontalAlignment = Alignment.CenterHorizontally) {
-            Text("U", color = Color.White, fontSize = (size / 2.3).sp, fontWeight = FontWeight.ExtraBold, lineHeight = (size / 2.5).sp)
-            Row(verticalAlignment = Alignment.CenterVertically) {
-                Box(Modifier.width((size / 3).dp).height(3.dp).background(Orange, RoundedCornerShape(4.dp)))
-                Spacer(Modifier.width(4.dp))
-                Box(Modifier.width((size / 3).dp).height(3.dp).background(Color.White, RoundedCornerShape(4.dp)))
-            }
-        }
+        Image(
+            painter = painterResource(R.drawable.updates_mark),
+            contentDescription = "UPDATES knowledge logo",
+            modifier = Modifier.fillMaxSize().padding((size / 8).dp)
+        )
     }
 }
 
