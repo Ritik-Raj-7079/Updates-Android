@@ -576,9 +576,9 @@ private fun ArticleReaderScreen(story: Story, isSaved: Boolean, onBack: () -> Un
         Row(Modifier.fillMaxWidth().padding(horizontal = 20.dp, vertical = 8.dp), verticalAlignment = Alignment.CenterVertically) {
             Text("Text size", color = bodyColor, fontSize = 12.sp)
             Spacer(Modifier.weight(1f))
-            IconButton(onClick = { fontSize = (fontSize - 1f).coerceAtLeast(14f }, modifier = Modifier.size(36.dp)) { Icon(Icons.Filled.Remove, "Decrease text", tint = Blue) }
+            IconButton(onClick = { fontSize = (fontSize - 1f).coerceAtLeast(14f) }, modifier = Modifier.size(36.dp)) { Icon(Icons.Filled.Remove, "Decrease text", tint = Blue) }
             Text("${fontSize.toInt()} sp", color = bodyColor, fontSize = 12.sp)
-            IconButton(onClick = { fontSize = (fontSize + 1f).coerceAtMost(26f }, modifier = Modifier.size(36.dp)) { Icon(Icons.Filled.Add, "Increase text", tint = Blue) }
+            IconButton(onClick = { fontSize = (fontSize + 1f).coerceAtMost(26f) }, modifier = Modifier.size(36.dp)) { Icon(Icons.Filled.Add, "Increase text", tint = Blue) }
         }
         LazyColumn(Modifier.fillMaxSize(), contentPadding = PaddingValues(horizontal = 24.dp, vertical = 18.dp), verticalArrangement = Arrangement.spacedBy(16.dp)) {
             item {
