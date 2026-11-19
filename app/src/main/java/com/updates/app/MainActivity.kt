@@ -42,6 +42,9 @@ class MainActivity : ComponentActivity() {
         val profileBio = preferences.getString("profile_bio", "") ?: ""
         val completed = preferences.getBoolean("onboarding_completed", false)
         val savedTopics = preferences.getStringSet("selected_topics", emptySet()) ?: emptySet()
+        val savedStoryTitles = preferences.getStringSet("saved_story_titles", emptySet()) ?: emptySet()
+        val savedBookKeys = preferences.getStringSet("saved_book_keys", emptySet()) ?: emptySet()
+        val historyJson = preferences.getString("reading_history", "[]") ?: "[]"
         val articleArray = JSONArray(preferences.getString("community_articles", "[]") ?: "[]")
         val initialArticles = mutableListOf<CommunityArticle>()
         for (index in 0 until articleArray.length()) {
@@ -54,6 +57,9 @@ class MainActivity : ComponentActivity() {
             UpdatesApp(
                 showOnboardingInitially = !completed,
                 initialTopics = savedTopics,
+                initialSavedStories = savedStoryTitles,
+                initialSavedBooks = savedBookKeys,
+                initialReadingHistory = JSONArray(historyJson).let { a -> (0 until a.length()).map { a.optString(it) } },
                 initialArticles = initialArticles,
                 initialDisplayName = displayName,
                 initialProfileBio = profileBio,
@@ -77,6 +83,11 @@ class MainActivity : ComponentActivity() {
                         .putBoolean("onboarding_completed", true)
                         .putStringSet("selected_topics", topics)
                         .apply()
+                },
+                onReadingDataChange = { storySet, bookSet, history ->
+                    preferences.edit().putStringSet("saved_story_titles", storySet.toSet())
+                        .putStringSet("saved_book_keys", bookSet.toSet())
+                        .putString("reading_history", JSONArray(history).toString()).apply()
                 }
             )
             }
@@ -95,6 +106,9 @@ private data class Story(
 private fun UpdatesApp(
     showOnboardingInitially: Boolean,
     initialTopics: Set<String>,
+    initialSavedStories: Set<String>,
+    initialSavedBooks: Set<String>,
+    initialReadingHistory: List<String>,
     initialArticles: List<CommunityArticle>,
     initialDisplayName: String,
     initialProfileBio: String,
@@ -103,14 +117,16 @@ private fun UpdatesApp(
     onSignOut: () -> Unit,
     onProfileChange: (String, String) -> Unit,
     onArticlesChange: (List<CommunityArticle>) -> Unit,
-    onOnboardingComplete: (Set<String>) -> Unit
+    onOnboardingComplete: (Set<String>) -> Unit,
+    onReadingDataChange: (Set<String>, Set<String>, List<String>) -> Unit
 ) {
     var showOnboarding by remember { mutableStateOf(showOnboardingInitially) }
     var selectedTopics by remember { mutableStateOf(initialTopics) }
     var selectedTab by remember { mutableStateOf("Home") }
     var query by remember { mutableStateOf("") }
-    var saved by remember { mutableStateOf(setOf<String>()) }
-    var savedBooks by remember { mutableStateOf(setOf<String>()) }
+    var saved by remember { mutableStateOf(initialSavedStories) }
+    var savedBooks by remember { mutableStateOf(initialSavedBooks) }
+    var readingHistory by remember { mutableStateOf(initialReadingHistory) }
     var communityArticles by remember { mutableStateOf(initialArticles) }
     var displayName by remember { mutableStateOf(initialDisplayName) }
     var profileBio by remember { mutableStateOf(initialProfileBio) }
@@ -173,6 +189,7 @@ private fun UpdatesApp(
                 onSave = {
                     val title = openedStory!!.title
                     saved = if (title in saved) saved - title else saved + title
+                    onReadingDataChange(saved, savedBooks, readingHistory)
                 }
             )
         } else {
@@ -207,10 +224,13 @@ private fun UpdatesApp(
                         onSuccess = { cloudArticleMessage = "Article deleted" },
                         onError = { cloudArticleMessage = "Delete failed: $it" })
                 },
-                onSaveBook = { key -> savedBooks = if (key in savedBooks) savedBooks - key else savedBooks + key },
+                onSaveBook = { key -> savedBooks = if (key in savedBooks) savedBooks - key else savedBooks + key; onReadingDataChange(saved, savedBooks, readingHistory) },
                 onSave = { title ->
                     saved = if (title in saved) saved - title else saved + title
+                    onReadingDataChange(saved, savedBooks, readingHistory)
                 },
+                readingHistory = readingHistory,
+                onClearHistory = { readingHistory = emptyList(); onReadingDataChange(saved, savedBooks, readingHistory) },
                 stories = stories,
                 selectedTopics = selectedTopics,
                 selectedFeedCategory = selectedFeedCategory,
@@ -219,7 +239,7 @@ private fun UpdatesApp(
                     selectedFeedCategory = category
                     selectedTab = "Home"
                 },
-                onOpenStory = { openedStory = it }
+                onOpenStory = { story -> openedStory = story; readingHistory = (listOf(story.title) + readingHistory.filterNot { it == story.title }).take(50); onReadingDataChange(saved, savedBooks, readingHistory) }
             )
         }
     }
@@ -374,6 +394,8 @@ private fun MainDashboard(
     onDeleteArticle: (String) -> Unit,
     onSaveBook: (String) -> Unit,
     onSave: (String) -> Unit,
+    readingHistory: List<String>,
+    onClearHistory: () -> Unit,
     stories: List<Story>,
     selectedTopics: Set<String>,
     selectedFeedCategory: String,
@@ -412,7 +434,7 @@ private fun MainDashboard(
                 "Explore" -> KnowledgeExploreScreen(onExploreCategory)
                 "News" -> NewsScreen()
                 "Research" -> ResearchScreen()
-                "Library" -> DigitalLibraryScreen(savedBooks, onSaveBook)
+                "Library" -> PersonalLibraryScreen(stories, saved, readingHistory, onSave, onClearHistory, onOpenStory, savedBooks, onSaveBook)
                 "Profile" -> UserProfileScreen(displayName, profileBio, communityArticles.count { it.authorUid == currentUserId }, cloudProfileMessage, onProfileSave, { onTabSelected("Write") }, onSignOut)
                 else -> ArticlePublishingScreen(communityArticles, displayName, onPublishArticle, onDeleteArticle, currentUserId, cloudArticleMessage)
             }
@@ -666,6 +688,51 @@ private fun LibraryScreen(savedStories: List<Story>, onOpenStory: (Story) -> Uni
         } else {
             LazyColumn(verticalArrangement = Arrangement.spacedBy(12.dp)) {
                 items(savedStories) { story -> StoryCard(story, true, onSave = {}, onOpen = { onOpenStory(story) }) }
+            }
+        }
+    }
+}
+
+@Composable
+private fun PersonalLibraryScreen(
+    stories: List<Story>, savedTitles: Set<String>, history: List<String>,
+    onToggleSaved: (String) -> Unit, onClearHistory: () -> Unit,
+    onOpenStory: (Story) -> Unit, savedBooks: Set<String>, onToggleBook: (String) -> Unit
+) {
+    var section by remember { mutableStateOf("Saved") }
+    val savedStories = stories.filter { it.title in savedTitles }
+    val recentStories = history.mapNotNull { title -> stories.find { it.title == title } }
+    Column(Modifier.fillMaxSize().background(Page).padding(horizontal = 18.dp, vertical = 16.dp)) {
+        Text("My Library", color = Navy, fontSize = 25.sp, fontWeight = FontWeight.ExtraBold)
+        Text("Your personal space for saved and recent reading", color = Color.Gray, fontSize = 12.sp)
+        Spacer(Modifier.height(16.dp))
+        Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+            listOf("Saved", "History", "Books").forEach { tab ->
+                FilterChip(selected = section == tab, onClick = { section = tab }, label = { Text(tab) })
+            }
+        }
+        Spacer(Modifier.height(12.dp))
+        when (section) {
+            "Saved" -> {
+                Text("${savedStories.size} saved articles", color = Blue, fontWeight = FontWeight.SemiBold, fontSize = 12.sp)
+                if (savedStories.isEmpty()) Text("No saved articles yet. Tap the bookmark icon on any story to keep it here.", color = Color.Gray, modifier = Modifier.padding(top = 20.dp))
+                else LazyColumn(verticalArrangement = Arrangement.spacedBy(12.dp)) {
+                    items(savedStories) { story -> StoryCard(story, true, onSave = { onToggleSaved(story.title) }, onOpen = { onOpenStory(story) }) }
+                }
+            }
+            "History" -> {
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    Text("${recentStories.size} recently opened", color = Blue, fontWeight = FontWeight.SemiBold, fontSize = 12.sp, modifier = Modifier.weight(1f))
+                    if (recentStories.isNotEmpty()) TextButton(onClick = onClearHistory) { Text("Clear history") }
+                }
+                if (recentStories.isEmpty()) Text("Your reading history will appear here when you open an article.", color = Color.Gray, modifier = Modifier.padding(top = 20.dp))
+                else LazyColumn(verticalArrangement = Arrangement.spacedBy(12.dp)) {
+                    items(recentStories) { story -> StoryCard(story, story.title in savedTitles, onSave = { onToggleSaved(story.title) }, onOpen = { onOpenStory(story) }) }
+                }
+            }
+            else -> {
+                Text("${savedBooks.size} saved catalogue books", color = Blue, fontWeight = FontWeight.SemiBold, fontSize = 12.sp)
+                Text("Saved book records are stored on this device. Open the Digital Library catalogue to add or remove books.", color = Color.Gray, modifier = Modifier.padding(top = 12.dp))
             }
         }
     }
