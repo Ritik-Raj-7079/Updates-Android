@@ -48,6 +48,10 @@ class MainActivity : ComponentActivity() {
         val savedStoryTitles = preferences.getStringSet("saved_story_titles", emptySet()) ?: emptySet()
         val savedBookKeys = preferences.getStringSet("saved_book_keys", emptySet()) ?: emptySet()
         val historyJson = preferences.getString("reading_history", "[]") ?: "[]"
+        val storyProgressJson = preferences.getString("story_reading_progress", "{}") ?: "{}"
+        val initialStoryProgress = JSONObject(storyProgressJson).let { obj ->
+            buildMap { obj.keys().forEach { key -> put(key, obj.optInt(key, 0).coerceAtLeast(0)) } }
+        }
         val articleArray = JSONArray(preferences.getString("community_articles", "[]") ?: "[]")
         val initialArticles = mutableListOf<CommunityArticle>()
         for (index in 0 until articleArray.length()) {
@@ -63,6 +67,7 @@ class MainActivity : ComponentActivity() {
                 initialSavedStories = savedStoryTitles,
                 initialSavedBooks = savedBookKeys,
                 initialReadingHistory = JSONArray(historyJson).let { a -> (0 until a.length()).map { a.optString(it) } },
+                initialStoryProgress = initialStoryProgress,
                 initialArticles = initialArticles,
                 initialDisplayName = displayName,
                 initialProfileBio = profileBio,
@@ -96,6 +101,13 @@ class MainActivity : ComponentActivity() {
                         CloudReadingData(storySet, bookSet, history),
                         onError = { android.util.Log.w("UPDATES_SYNC", it) }
                     )
+                },
+                onReadingProgressChange = { title, position ->
+                    val progress = JSONObject(preferences.getString("story_reading_progress", "{}") ?: "{}")
+                    progress.put(title, position)
+                    preferences.edit().putString("story_reading_progress", progress.toString()).apply()
+                    CloudReadingRepository.saveProgress(firebaseUser.uid, title, position,
+                        onError = { android.util.Log.w("UPDATES_PROGRESS", it) })
                 }
             )
             }
@@ -117,6 +129,7 @@ private fun UpdatesApp(
     initialSavedStories: Set<String>,
     initialSavedBooks: Set<String>,
     initialReadingHistory: List<String>,
+    initialStoryProgress: Map<String, Int>,
     initialArticles: List<CommunityArticle>,
     initialDisplayName: String,
     initialProfileBio: String,
@@ -126,7 +139,8 @@ private fun UpdatesApp(
     onProfileChange: (String, String) -> Unit,
     onArticlesChange: (List<CommunityArticle>) -> Unit,
     onOnboardingComplete: (Set<String>) -> Unit,
-    onReadingDataChange: (Set<String>, Set<String>, List<String>) -> Unit
+    onReadingDataChange: (Set<String>, Set<String>, List<String>) -> Unit,
+    onReadingProgressChange: (String, Int) -> Unit
 ) {
     var showOnboarding by remember { mutableStateOf(showOnboardingInitially) }
     var selectedTopics by remember { mutableStateOf(initialTopics) }
@@ -137,6 +151,7 @@ private fun UpdatesApp(
     var saved by remember { mutableStateOf(initialSavedStories) }
     var savedBooks by remember { mutableStateOf(initialSavedBooks) }
     var readingHistory by remember { mutableStateOf(initialReadingHistory) }
+    var storyProgress by remember { mutableStateOf(initialStoryProgress) }
     var communityArticles by remember { mutableStateOf(initialArticles) }
     var displayName by remember { mutableStateOf(initialDisplayName) }
     var profileBio by remember { mutableStateOf(initialProfileBio) }
@@ -158,7 +173,9 @@ private fun UpdatesApp(
             saved = saved + cloudData.savedStories
             savedBooks = savedBooks + cloudData.savedBooks
             readingHistory = (readingHistory + cloudData.history).distinct().take(50)
+            storyProgress = storyProgress + cloudData.storyProgress
             onReadingDataChange(saved, savedBooks, readingHistory)
+            storyProgress.forEach { (title, position) -> onReadingProgressChange(title, position) }
         }, onError = { android.util.Log.w("UPDATES_SYNC", it) })
     }
 
@@ -232,6 +249,13 @@ private fun UpdatesApp(
             ArticleReaderScreen(
                 story = openedStory!!,
                 isSaved = openedStory!!.title in saved,
+                initialProgress = storyProgress[openedStory!!.title] ?: 0,
+                onProgressChange = { position ->
+                    if (storyProgress[openedStory!!.title] != position) {
+                        storyProgress = storyProgress + (openedStory!!.title to position)
+                        onReadingProgressChange(openedStory!!.title, position)
+                    }
+                },
                 onBack = { openedStory = null },
                 onSave = {
                     val title = openedStory!!.title
@@ -626,7 +650,20 @@ private fun StoryCard(story: Story, isSaved: Boolean, onSave: () -> Unit, onOpen
     }
 }
 @Composable
-private fun ArticleReaderScreen(story: Story, isSaved: Boolean, onBack: () -> Unit, onSave: () -> Unit) {
+private fun ArticleReaderScreen(
+    story: Story,
+    isSaved: Boolean,
+    initialProgress: Int,
+    onProgressChange: (Int) -> Unit,
+    onBack: () -> Unit,
+    onSave: () -> Unit
+) {
+    val readerListState = androidx.compose.foundation.lazy.rememberLazyListState(initialFirstVisibleItemIndex = initialProgress.coerceIn(0, 2))
+    LaunchedEffect(readerListState) {
+        kotlinx.coroutines.flow.snapshotFlow { readerListState.firstVisibleItemIndex }
+            .distinctUntilChanged()
+            .collect { onProgressChange(it) }
+    }
     var fontSize by remember { mutableFloatStateOf(17f) }
     var readingTheme by remember { mutableStateOf(0) }
     val backgrounds = listOf(Page, Color(0xFF17191C), Color(0xFFF2E8D5))
@@ -646,7 +683,7 @@ private fun ArticleReaderScreen(story: Story, isSaved: Boolean, onBack: () -> Un
             Text("${fontSize.toInt()} sp", color = bodyColor, fontSize = 12.sp)
             IconButton(onClick = { if (fontSize < 26f) fontSize += 1f }, modifier = Modifier.size(36.dp)) { Icon(Icons.Filled.Add, "Increase text", tint = Blue) }
         }
-        LazyColumn(Modifier.fillMaxSize(), contentPadding = PaddingValues(horizontal = 24.dp, vertical = 18.dp), verticalArrangement = Arrangement.spacedBy(16.dp)) {
+        LazyColumn(state = readerListState, modifier = Modifier.fillMaxSize(), contentPadding = PaddingValues(horizontal = 24.dp, vertical = 18.dp), verticalArrangement = Arrangement.spacedBy(16.dp)) {
             item {
                 Text(story.category, color = Blue, fontSize = 11.sp, fontWeight = FontWeight.Bold, letterSpacing = 1.2.sp)
                 Text(story.title, color = foreground, fontSize = 29.sp, lineHeight = 36.sp, fontWeight = FontWeight.ExtraBold)
