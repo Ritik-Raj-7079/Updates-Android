@@ -660,7 +660,7 @@ private fun ArticleReaderScreen(
 ) {
     val readerListState = androidx.compose.foundation.lazy.rememberLazyListState(initialFirstVisibleItemIndex = initialProgress.coerceIn(0, 2))
     LaunchedEffect(readerListState) {
-        kotlinx.coroutines.flow.snapshotFlow { readerListState.firstVisibleItemIndex }
+        androidx.compose.runtime.snapshotFlow { readerListState.firstVisibleItemIndex }
             .collect { onProgressChange(it) }
     }
     var fontSize by remember { mutableFloatStateOf(17f) }
