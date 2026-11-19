@@ -2,6 +2,7 @@ package com.updates.app
 
 import android.os.Bundle
 import androidx.activity.ComponentActivity
+import androidx.activity.compose.BackHandler
 import androidx.activity.compose.setContent
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
@@ -123,6 +124,7 @@ private fun UpdatesApp(
     var showOnboarding by remember { mutableStateOf(showOnboardingInitially) }
     var selectedTopics by remember { mutableStateOf(initialTopics) }
     var selectedTab by remember { mutableStateOf("Home") }
+    var showExitDialog by remember { mutableStateOf(false) }
     var query by remember { mutableStateOf("") }
     var saved by remember { mutableStateOf(initialSavedStories) }
     var savedBooks by remember { mutableStateOf(initialSavedBooks) }
@@ -172,6 +174,32 @@ private fun UpdatesApp(
             surface = Color.White
         )
     ) {
+        BackHandler(enabled = !showOnboarding) {
+            when {
+                openedStory != null -> openedStory = null
+                selectedTab != "Home" -> selectedTab = "Home"
+                else -> showExitDialog = true
+            }
+        }
+
+        if (showExitDialog) {
+            AlertDialog(
+                onDismissRequest = { showExitDialog = false },
+                title = { Text("Exit UPDATES?") },
+                text = { Text("Are you sure you want to close the app?") },
+                confirmButton = {
+                    TextButton(onClick = { showExitDialog = false; (androidx.compose.ui.platform.LocalContext.current as? android.app.Activity)?.finish() }) {
+                        Text("Exit", color = Blue)
+                    }
+                },
+                dismissButton = {
+                    TextButton(onClick = { showExitDialog = false }) {
+                        Text("Stay", color = Blue)
+                    }
+                }
+            )
+        }
+
         if (showOnboarding) {
             OnboardingFlow(
                 selectedTopics = selectedTopics,
