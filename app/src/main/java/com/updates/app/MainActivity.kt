@@ -740,6 +740,20 @@ private fun PersonalLibraryScreen(
             }
         }
         Spacer(Modifier.height(12.dp))
+        if (section == "History" && recentStories.isNotEmpty()) {
+            Card(
+                colors = CardDefaults.cardColors(containerColor = Color(0xFFEAF0FF)),
+                shape = RoundedCornerShape(16.dp),
+                modifier = Modifier.fillMaxWidth().padding(bottom = 10.dp)
+            ) {
+                Column(Modifier.padding(14.dp)) {
+                    Text("CONTINUE READING", color = Blue, fontSize = 10.sp, fontWeight = FontWeight.Bold, letterSpacing = 1.sp)
+                    Spacer(Modifier.height(4.dp))
+                    Text(recentStories.first().title, color = Navy, fontWeight = FontWeight.Bold, fontSize = 15.sp)
+                    TextButton(onClick = { onOpenStory(recentStories.first()) }) { Text("Continue reading") }
+                }
+            }
+        }
         when (section) {
             "Saved" -> {
                 Text("${savedStories.size} saved articles", color = Blue, fontWeight = FontWeight.SemiBold, fontSize = 12.sp)
