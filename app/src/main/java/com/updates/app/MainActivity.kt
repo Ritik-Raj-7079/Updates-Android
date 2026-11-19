@@ -153,9 +153,11 @@ private fun UpdatesApp(
 
     LaunchedEffect(userId) {
         CloudReadingRepository.load(userId, onSuccess = { cloudData ->
-            saved = cloudData.savedStories
-            savedBooks = cloudData.savedBooks
-            readingHistory = cloudData.history
+            // Merge cloud and device data so a first-time/empty cloud document
+            // never wipes a reader's existing local library.
+            saved = saved + cloudData.savedStories
+            savedBooks = savedBooks + cloudData.savedBooks
+            readingHistory = (readingHistory + cloudData.history).distinct().take(50)
             onReadingDataChange(saved, savedBooks, readingHistory)
         }, onError = { android.util.Log.w("UPDATES_SYNC", it) })
     }
