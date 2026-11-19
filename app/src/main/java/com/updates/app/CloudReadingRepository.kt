@@ -6,7 +6,8 @@ import com.google.firebase.firestore.SetOptions
 data class CloudReadingData(
     val savedStories: Set<String> = emptySet(),
     val savedBooks: Set<String> = emptySet(),
-    val history: List<String> = emptyList()
+    val history: List<String> = emptyList(),
+    val storyProgress: Map<String, Int> = emptyMap()
 )
 
 object CloudReadingRepository {
@@ -24,7 +25,10 @@ object CloudReadingRepository {
                     CloudReadingData(
                         savedStories = (doc.get("savedStories") as? List<*>)?.filterIsInstance<String>()?.toSet() ?: emptySet(),
                         savedBooks = (doc.get("savedBooks") as? List<*>)?.filterIsInstance<String>()?.toSet() ?: emptySet(),
-                        history = (doc.get("history") as? List<*>)?.filterIsInstance<String>()?.take(50) ?: emptyList()
+                        history = (doc.get("history") as? List<*>)?.filterIsInstance<String>()?.take(50) ?: emptyList(),
+                        storyProgress = (doc.get("storyProgress") as? Map<*, *>)?.mapNotNull { (key, value) ->
+                            if (key is String && value is Number) key to value.toInt().coerceAtLeast(0) else null
+                        }?.toMap() ?: emptyMap()
                     )
                 )
             }
@@ -47,4 +51,27 @@ object CloudReadingRepository {
             .addOnSuccessListener { onSuccess() }
             .addOnFailureListener { onError(it.localizedMessage ?: "Could not sync your library.") }
     }
+    fun saveProgress(uid: String, title: String, position: Int, onError: (String) -> Unit = {}) {
+        if (uid.isBlank() || title.isBlank()) {
+            onError("Sign in to sync reading progress.")
+            return
+        }
+        val safeKey = title.take(120)
+        db.collection("users").document(uid).collection("privateData").document("reading")
+            .update("storyProgress.$safeKey", position.coerceAtLeast(0),
+                "updatedAt", com.google.firebase.firestore.FieldValue.serverTimestamp())
+            .addOnFailureListener { error ->
+                // A missing reading document is created with the progress map.
+                val payload = hashMapOf(
+                    "storyProgress" to mapOf(safeKey to position.coerceAtLeast(0)),
+                    "updatedAt" to com.google.firebase.firestore.FieldValue.serverTimestamp()
+                )
+                db.collection("users").document(uid).collection("privateData").document("reading")
+                    .set(payload, SetOptions.merge())
+                    .addOnFailureListener { retryError ->
+                        onError(retryError.localizedMessage ?: error.localizedMessage ?: "Could not sync reading progress.")
+                    }
+            }
+    }
+
 }
