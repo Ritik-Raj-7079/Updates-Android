@@ -26,9 +26,10 @@ object CloudReadingRepository {
                         savedStories = (doc.get("savedStories") as? List<*>)?.filterIsInstance<String>()?.toSet() ?: emptySet(),
                         savedBooks = (doc.get("savedBooks") as? List<*>)?.filterIsInstance<String>()?.toSet() ?: emptySet(),
                         history = (doc.get("history") as? List<*>)?.filterIsInstance<String>()?.take(50) ?: emptyList(),
-                        storyProgress = (doc.get("storyProgress") as? Map<*, *>)?.mapNotNull { (key, value) ->
-                            if (key is String && value is Number) key to value.toInt().coerceAtLeast(0) else null
-                        }?.toMap() ?: emptyMap()
+                        storyProgress = (doc.get("storyProgress") as? Map<*, *>)?.entries
+                            ?.filter { it.key is String && it.value is Number }
+                            ?.associate { (it.key as String) to (it.value as Number).toInt().coerceAtLeast(0) }
+                            ?: emptyMap()
                     )
                 )
             }
@@ -60,9 +61,12 @@ object CloudReadingRepository {
             .collection("privateData").document("reading")
         db.runTransaction { transaction ->
             val snapshot = transaction.get(document)
-            val progress = (snapshot.get("storyProgress") as? Map<*, *>)?.mapNotNull { (key, value) ->
-                if (key is String && value is Number) key to value.toInt().coerceAtLeast(0) else null
-            }?.toMutableMap() ?: mutableMapOf()
+            val progress = mutableMapOf<String, Int>()
+            (snapshot.get("storyProgress") as? Map<*, *>)?.forEach { (key, value) ->
+                if (key is String && value is Number) {
+                    progress[key] = value.toInt().coerceAtLeast(0)
+                }
+            }
             // Keep the original title as the map key; transaction safely handles
             // punctuation and concurrent progress updates from another device.
             progress[title.take(120)] = position.coerceAtLeast(0)
