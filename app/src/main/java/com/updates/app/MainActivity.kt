@@ -759,8 +759,11 @@ private fun PersonalLibraryScreen(
                 }
             }
             else -> {
-                Text("${savedBooks.size} saved catalogue books", color = Blue, fontWeight = FontWeight.SemiBold, fontSize = 12.sp)
-                Text("Saved book records are stored on this device. Open the Digital Library catalogue to add or remove books.", color = Color.Gray, modifier = Modifier.padding(top = 12.dp))
+                Column(Modifier.fillMaxWidth().weight(1f)) {
+                    Text("${savedBooks.size} saved catalogue books", color = Blue, fontWeight = FontWeight.SemiBold, fontSize = 12.sp)
+                    Spacer(Modifier.height(8.dp))
+                    DigitalLibraryScreen(savedBooks, onToggleBook)
+                }
             }
         }
     }
