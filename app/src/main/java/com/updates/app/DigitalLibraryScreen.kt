@@ -30,7 +30,10 @@ private data class LibraryBook(
     val title: String,
     val authors: String,
     val year: String,
-    val editions: String
+    val editions: String,
+    val ebookAccess: String,
+    val hasFullText: Boolean,
+    val archiveId: String
 )
 
 @Composable
@@ -41,7 +44,48 @@ fun DigitalLibraryScreen(savedTitles: Set<String>, onToggleSaved: (String) -> Un
     var loading by remember { mutableStateOf(false) }
     var error by remember { mutableStateOf<String?>(null) }
     var selectedBook by remember { mutableStateOf<LibraryBook?>(null) }
+    var detailLoading by remember { mutableStateOf(false) }
+    var bookDescription by remember { mutableStateOf("") }
+    var bookSubjects by remember { mutableStateOf<List<String>>(emptyList()) }
     val context = LocalContext.current
+
+    LaunchedEffect(selectedBook?.key) {
+        val book = selectedBook ?: return@LaunchedEffect
+        detailLoading = true
+        bookDescription = ""
+        bookSubjects = emptyList()
+        try {
+            val details = withContext(Dispatchers.IO) {
+                val connection = URL("https://openlibrary.org${book.key}.json").openConnection() as HttpURLConnection
+                connection.requestMethod = "GET"
+                connection.connectTimeout = 10000
+                connection.readTimeout = 10000
+                try {
+                    val json = JSONObject(connection.inputStream.bufferedReader().use { it.readText() })
+                    val rawDescription = json.opt("description")
+                    val description = when (rawDescription) {
+                        is JSONObject -> rawDescription.optString("value", "")
+                        is String -> rawDescription
+                        else -> ""
+                    }
+                    val subjects = json.optJSONArray("subjects")
+                    val subjectList = buildList {
+                        if (subjects != null) for (i in 0 until minOf(subjects.length(), 8)) {
+                            val value = subjects.optString(i).trim()
+                            if (value.isNotBlank()) add(value)
+                        }
+                    }
+                    description to subjectList
+                } finally { connection.disconnect() }
+            }
+            bookDescription = details.first
+            bookSubjects = details.second
+        } catch (_: Exception) {
+            bookDescription = "A detailed description is not available in the catalogue record."
+        } finally {
+            detailLoading = false
+        }
+    }
 
     LaunchedEffect(submittedQuery) {
         loading = true
@@ -49,7 +93,7 @@ fun DigitalLibraryScreen(savedTitles: Set<String>, onToggleSaved: (String) -> Un
         try {
             books = withContext(Dispatchers.IO) {
                 val encoded = java.net.URLEncoder.encode(submittedQuery, "UTF-8")
-                val connection = URL("https://openlibrary.org/search.json?q=$encoded&limit=25&fields=key,title,author_name,first_publish_year,edition_count").openConnection() as HttpURLConnection
+                val connection = URL("https://openlibrary.org/search.json?q=$encoded&limit=25&fields=key,title,author_name,first_publish_year,edition_count,ebook_access,has_fulltext,ia").openConnection() as HttpURLConnection
                 connection.requestMethod = "GET"
                 connection.connectTimeout = 12000
                 connection.readTimeout = 12000
@@ -64,7 +108,9 @@ fun DigitalLibraryScreen(savedTitles: Set<String>, onToggleSaved: (String) -> Un
                             if (key.isNotBlank() && title.isNotBlank()) {
                                 val authors = item.optJSONArray("author_name")
                                 val authorText = if (authors != null && authors.length() > 0) authors.optString(0) else "Author not listed"
-                                add(LibraryBook(key, title, authorText, item.optInt("first_publish_year", 0).let { if (it > 0) it.toString() else "Year not listed" }, item.optInt("edition_count", 0).toString()))
+                                val archiveIds = item.optJSONArray("ia")
+                                val archiveId = if (archiveIds != null && archiveIds.length() > 0) archiveIds.optString(0) else ""
+                                add(LibraryBook(key, title, authorText, item.optInt("first_publish_year", 0).let { if (it > 0) it.toString() else "Year not listed" }, item.optInt("edition_count", 0).toString(), item.optString("ebook_access", "no_ebook"), item.optBoolean("has_fulltext", false), archiveId))
                             }
                         }
                     }
@@ -110,6 +156,17 @@ fun DigitalLibraryScreen(savedTitles: Set<String>, onToggleSaved: (String) -> Un
                                 Text(book.title, color = Color(0xFF071A57), fontWeight = FontWeight.Bold, fontSize = 14.sp)
                                 Text(book.authors, color = Color.DarkGray, fontSize = 11.sp)
                                 Text("${book.year}  •  ${book.editions} editions", color = Color.Gray, fontSize = 10.sp)
+                                Text(
+                                    when (book.ebookAccess) {
+                                        "public" -> "Digital reading available"
+                                        "borrowable" -> "Borrowing may be available"
+                                        "printdisabled" -> "Restricted digital access"
+                                        else -> if (book.hasFullText) "Digital text listed" else "Catalogue record"
+                                    },
+                                    color = if (book.ebookAccess == "public") Color(0xFF067647) else Color.Gray,
+                                    fontSize = 10.sp,
+                                    fontWeight = FontWeight.SemiBold
+                                )
                             }
                             IconButton(onClick = { onToggleSaved(book.key) }) {
                                 Icon(if (book.key in savedTitles) Icons.Filled.Bookmark else Icons.Filled.BookmarkBorder, contentDescription = "Save book", tint = Color(0xFF155EEF))
@@ -126,18 +183,45 @@ fun DigitalLibraryScreen(savedTitles: Set<String>, onToggleSaved: (String) -> Un
         AlertDialog(
             onDismissRequest = { selectedBook = null },
             title = { Text(book.title, color = Color(0xFF071A57), fontWeight = FontWeight.Bold) },
-            text = { Column {
-                Text("Author: ${book.authors}")
-                Text("First publication: ${book.year}")
-                Text("Known editions: ${book.editions}")
-                Spacer(Modifier.height(8.dp))
-                Text("Reading or borrowing access depends on the edition. Open the catalogue record to check available options.", color = Color.Gray, fontSize = 12.sp)
-            } },
-            confirmButton = { TextButton(onClick = {
-                val url = "https://openlibrary.org${book.key}"
-                context.startActivity(Intent(Intent.ACTION_VIEW, Uri.parse(url)))
-                selectedBook = null
-            }) { Text("View catalogue") } },
+            text = {
+                Column {
+                    Text("Author: ${book.authors}")
+                    Text("First publication: ${book.year}")
+                    Text("Known editions: ${book.editions}")
+                    Spacer(Modifier.height(10.dp))
+                    Text("ABOUT THIS BOOK", color = Color(0xFF155EEF), fontSize = 10.sp, fontWeight = FontWeight.Bold, letterSpacing = 1.sp)
+                    Spacer(Modifier.height(4.dp))
+                    if (detailLoading) {
+                        Row(verticalAlignment = Alignment.CenterVertically) {
+                            CircularProgressIndicator(modifier = Modifier.size(18.dp), strokeWidth = 2.dp)
+                            Spacer(Modifier.width(8.dp))
+                            Text("Loading catalogue details…", fontSize = 12.sp, color = Color.Gray)
+                        }
+                    } else {
+                        Text(bookDescription.ifBlank { "No description is available for this catalogue record." }, fontSize = 12.sp, lineHeight = 17.sp, color = Color.DarkGray)
+                        if (bookSubjects.isNotEmpty()) {
+                            Spacer(Modifier.height(8.dp))
+                            Text("Subjects", fontWeight = FontWeight.Bold, fontSize = 11.sp)
+                            Text(bookSubjects.joinToString(" • "), fontSize = 11.sp, color = Color.Gray)
+                        }
+                    }
+                    Spacer(Modifier.height(10.dp))
+                    val accessText = when (book.ebookAccess) {
+                        "public" -> "Open Library lists public digital access for this title."
+                        "borrowable" -> "Borrowing may be available. Sign-in and lending limits may apply."
+                        "printdisabled" -> "Access may be restricted to eligible readers."
+                        else -> "A catalogue listing does not guarantee a free or readable digital copy."
+                    }
+                    Text(accessText, color = Color.Gray, fontSize = 11.sp, lineHeight = 15.sp)
+                }
+            },
+            confirmButton = {
+                TextButton(onClick = {
+                    val url = if (book.archiveId.isNotBlank()) "https://archive.org/details/${book.archiveId}" else "https://openlibrary.org${book.key}"
+                    context.startActivity(Intent(Intent.ACTION_VIEW, Uri.parse(url)))
+                    selectedBook = null
+                }) { Text(if (book.archiveId.isNotBlank()) "Check reading access" else "View catalogue") }
+            },
             dismissButton = { TextButton(onClick = { selectedBook = null }) { Text("Close") } }
         )
     }
