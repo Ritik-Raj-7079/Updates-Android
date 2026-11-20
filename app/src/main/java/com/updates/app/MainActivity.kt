@@ -659,8 +659,18 @@ private fun ArticleReaderScreen(
     onBack: () -> Unit,
     onSave: () -> Unit
 ) {
-    val readerListState = androidx.compose.foundation.lazy.rememberLazyListState(initialFirstVisibleItemIndex = initialProgress.coerceIn(0, 2))
+    val sections = remember(story.title, story.summary) {
+        story.summary.split(Regex("\\n\\s*\\n"))
+            .map { it.trim() }.filter { it.isNotBlank() }
+            .ifEmpty { listOf(story.summary.trim().ifBlank { "No reading content is available yet." }) }
+    }
+    val lastContentIndex = sections.size
+    val totalItems = sections.size + 2
+    val readerListState = androidx.compose.foundation.lazy.rememberLazyListState(
+        initialFirstVisibleItemIndex = initialProgress.coerceIn(0, totalItems - 1)
+    )
     val readerScope = rememberCoroutineScope()
+    var showSectionMenu by remember { mutableStateOf(false) }
     LaunchedEffect(readerListState) {
         androidx.compose.runtime.snapshotFlow { readerListState.firstVisibleItemIndex }
             .collect { onProgressChange(it) }
@@ -670,6 +680,9 @@ private fun ArticleReaderScreen(
     val backgrounds = listOf(Page, Color(0xFF17191C), Color(0xFFF2E8D5))
     val foreground = if (readingTheme == 1) Color(0xFFE8E8E8) else Navy
     val bodyColor = if (readingTheme == 1) Color(0xFFCCCCCC) else Color(0xFF303846)
+    val currentIndex = readerListState.firstVisibleItemIndex
+    val currentSection = (currentIndex - 1).coerceIn(0, sections.lastIndex)
+    val readerProgress = ((currentIndex + 1).toFloat() / totalItems).coerceIn(0f, 1f)
     Column(Modifier.fillMaxSize().background(backgrounds[readingTheme])) {
         Row(Modifier.fillMaxWidth().background(if (readingTheme == 1) Color(0xFF222429) else Color.White).padding(horizontal = 7.dp, vertical = 4.dp), verticalAlignment = Alignment.CenterVertically) {
             IconButton(onClick = onBack) { Icon(Icons.Filled.ArrowBack, "Back", tint = foreground) }
@@ -684,24 +697,38 @@ private fun ArticleReaderScreen(
             Text("${fontSize.toInt()} sp", color = bodyColor, fontSize = 12.sp)
             IconButton(onClick = { if (fontSize < 26f) fontSize += 1f }, modifier = Modifier.size(36.dp)) { Icon(Icons.Filled.Add, "Increase text", tint = Blue) }
         }
-        val readerProgress = ((readerListState.firstVisibleItemIndex + 1) / 3f).coerceIn(0f, 1f)
         Row(Modifier.fillMaxWidth().padding(horizontal = 20.dp), verticalAlignment = Alignment.CenterVertically) {
             LinearProgressIndicator(progress = { readerProgress }, modifier = Modifier.weight(1f).height(5.dp), color = Blue, trackColor = if (readingTheme == 1) Color.DarkGray else Color(0xFFDCE3EF))
             Spacer(Modifier.width(10.dp))
             Text("${(readerProgress * 100).toInt()}%", color = bodyColor, fontSize = 11.sp, fontWeight = FontWeight.SemiBold)
         }
         Row(Modifier.fillMaxWidth().padding(horizontal = 12.dp), horizontalArrangement = Arrangement.SpaceBetween, verticalAlignment = Alignment.CenterVertically) {
-            TextButton(onClick = { readerScope.launch { readerListState.animateScrollToItem((readerListState.firstVisibleItemIndex - 1).coerceAtLeast(0)) } }) {
-                Icon(Icons.Filled.KeyboardArrowUp, contentDescription = null); Text("Previous section", fontSize = 11.sp)
+            TextButton(onClick = { readerScope.launch { readerListState.animateScrollToItem((currentIndex - 1).coerceAtLeast(0)) } }, enabled = currentIndex > 0) {
+                Icon(Icons.Filled.KeyboardArrowUp, contentDescription = null); Text("Previous", fontSize = 11.sp)
             }
-            Text("Section ${readerListState.firstVisibleItemIndex + 1} of 3", color = bodyColor, fontSize = 10.sp)
-            TextButton(onClick = { readerScope.launch { readerListState.animateScrollToItem((readerListState.firstVisibleItemIndex + 1).coerceAtMost(2)) } }) {
-                Text("Next section", fontSize = 11.sp); Icon(Icons.Filled.KeyboardArrowDown, contentDescription = null)
+            Box {
+                TextButton(onClick = { showSectionMenu = true }) {
+                    Text(if (currentIndex == 0) "Start" else if (currentIndex == totalItems - 1) "Finish" else "Section ${currentSection + 1} of ${sections.size}", color = Blue, fontSize = 11.sp)
+                    Icon(Icons.Filled.ExpandMore, contentDescription = "Choose section")
+                }
+                DropdownMenu(expanded = showSectionMenu, onDismissRequest = { showSectionMenu = false }) {
+                    DropdownMenuItem(text = { Text("Article overview") }, onClick = { showSectionMenu = false; readerScope.launch { readerListState.animateScrollToItem(0) } })
+                    sections.forEachIndexed { index, paragraph ->
+                        DropdownMenuItem(
+                            text = { Text("Section ${index + 1}: " + paragraph.take(34).replace("\\n", " ") + if (paragraph.length > 34) "…" else "") },
+                            onClick = { showSectionMenu = false; readerScope.launch { readerListState.animateScrollToItem(index + 1) } }
+                        )
+                    }
+                    DropdownMenuItem(text = { Text("Finish reading") }, onClick = { showSectionMenu = false; readerScope.launch { readerListState.animateScrollToItem(lastContentIndex + 1) } })
+                }
+            }
+            TextButton(onClick = { readerScope.launch { readerListState.animateScrollToItem((currentIndex + 1).coerceAtMost(totalItems - 1)) } }, enabled = currentIndex < totalItems - 1) {
+                Text("Next", fontSize = 11.sp); Icon(Icons.Filled.KeyboardArrowDown, contentDescription = null)
             }
         }
-        LazyColumn(state = readerListState, modifier = Modifier.fillMaxSize(), contentPadding = PaddingValues(horizontal = 24.dp, vertical = 18.dp), verticalArrangement = Arrangement.spacedBy(16.dp)) {
+        LazyColumn(state = readerListState, modifier = Modifier.fillMaxSize(), contentPadding = PaddingValues(horizontal = 24.dp, vertical = 18.dp), verticalArrangement = Arrangement.spacedBy(18.dp)) {
             item {
-                Text(story.category, color = Blue, fontSize = 11.sp, fontWeight = FontWeight.Bold, letterSpacing = 1.2.sp)
+                Text(story.category.uppercase(), color = Blue, fontSize = 11.sp, fontWeight = FontWeight.Bold, letterSpacing = 1.2.sp)
                 Text(story.title, color = foreground, fontSize = 29.sp, lineHeight = 36.sp, fontWeight = FontWeight.ExtraBold)
                 Row(verticalAlignment = Alignment.CenterVertically) {
                     Icon(Icons.Filled.Schedule, null, tint = bodyColor, modifier = Modifier.size(14.dp))
@@ -710,13 +737,12 @@ private fun ArticleReaderScreen(
                 }
                 HorizontalDivider(color = if (readingTheme == 1) Color.DarkGray else Color(0xFFDCE3EF))
             }
-            item {
-                Text(story.summary, color = bodyColor, fontSize = fontSize.sp, lineHeight = (fontSize * 1.65f).sp)
-                Spacer(Modifier.height(5.dp))
-                Text("Why this topic matters", color = foreground, fontSize = 20.sp, fontWeight = FontWeight.Bold)
-                Text("Knowledge grows when we stay curious, ask thoughtful questions and explore reliable information. This introduction is a starting point for understanding the topic and discovering the ideas behind it.", color = bodyColor, fontSize = fontSize.sp, lineHeight = (fontSize * 1.65f).sp)
-                Text("Keep exploring", color = foreground, fontSize = 20.sp, fontWeight = FontWeight.Bold)
-                Text("Use the Explore section to discover related subjects. Save this reading to return to it later.", color = bodyColor, fontSize = fontSize.sp, lineHeight = (fontSize * 1.65f).sp)
+            items(sections.size) { index ->
+                Column {
+                    Text("SECTION ${index + 1}", color = Blue, fontSize = 10.sp, fontWeight = FontWeight.Bold, letterSpacing = 1.1.sp)
+                    Spacer(Modifier.height(8.dp))
+                    Text(sections[index], color = bodyColor, fontSize = fontSize.sp, lineHeight = (fontSize * 1.7f).sp)
+                }
             }
             item {
                 Row(Modifier.fillMaxWidth().background(if (readingTheme == 1) Color(0xFF24262A) else Color.White, RoundedCornerShape(14.dp)).padding(14.dp), verticalAlignment = Alignment.CenterVertically) {
