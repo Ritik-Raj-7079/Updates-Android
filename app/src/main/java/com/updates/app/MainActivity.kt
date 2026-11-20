@@ -727,16 +727,16 @@ private fun ArticleReaderScreen(
     }
     var fontSize by remember { mutableFloatStateOf(17f) }
     var readingTheme by remember { mutableStateOf(0) }
-    val backgrounds = listOf(Page, Color(0xFF17191C), Color(0xFFF2E8D5))
+    val backgrounds = listOf(Color(0xFFF6F3E9), Color(0xFF17191C), Color(0xFFF2E8D5))
     val foreground = if (readingTheme == 1) Color(0xFFE8E8E8) else Navy
     val bodyColor = if (readingTheme == 1) Color(0xFFCCCCCC) else Color(0xFF303846)
     val currentIndex = readerListState.firstVisibleItemIndex
     val currentSection = (currentIndex - 1).coerceIn(0, sections.lastIndex)
     val readerProgress = ((currentIndex + 1).toFloat() / totalItems).coerceIn(0f, 1f)
     Column(Modifier.fillMaxSize().background(backgrounds[readingTheme])) {
-        Row(Modifier.fillMaxWidth().background(if (readingTheme == 1) Color(0xFF222429) else Color.White).padding(horizontal = 7.dp, vertical = 4.dp), verticalAlignment = Alignment.CenterVertically) {
+        Row(Modifier.fillMaxWidth().background(if (readingTheme == 1) Color(0xFF222429) else Color(0xFFF0EBDD)).padding(horizontal = 7.dp, vertical = 4.dp), verticalAlignment = Alignment.CenterVertically) {
             IconButton(onClick = onBack) { Icon(Icons.Filled.ArrowBack, "Back", tint = foreground) }
-            Text("UPDATES READER", color = foreground, fontWeight = FontWeight.Bold, fontSize = 12.sp, modifier = Modifier.weight(1f))
+            Text("UPDATES READER", color = foreground, fontFamily = androidx.compose.ui.text.font.FontFamily.Serif, fontWeight = FontWeight.Bold, fontSize = 15.sp, letterSpacing = 1.sp, modifier = Modifier.weight(1f))
             IconButton(onClick = onSave) { Icon(if (isSaved) Icons.Filled.Bookmark else Icons.Filled.BookmarkBorder, "Bookmark", tint = Blue) }
             IconButton(onClick = { readingTheme = (readingTheme + 1) % backgrounds.size }) { Icon(Icons.Filled.Palette, "Reading theme", tint = foreground) }
         }
@@ -779,7 +779,7 @@ private fun ArticleReaderScreen(
         LazyColumn(state = readerListState, modifier = Modifier.fillMaxSize(), contentPadding = PaddingValues(horizontal = 24.dp, vertical = 18.dp), verticalArrangement = Arrangement.spacedBy(18.dp)) {
             item {
                 Text(story.category.uppercase(), color = Blue, fontSize = 11.sp, fontWeight = FontWeight.Bold, letterSpacing = 1.2.sp)
-                Text(story.title, color = foreground, fontSize = 29.sp, lineHeight = 36.sp, fontWeight = FontWeight.ExtraBold)
+                Text(story.title, color = foreground, fontFamily = androidx.compose.ui.text.font.FontFamily.Serif, fontSize = 32.sp, lineHeight = 39.sp, fontWeight = FontWeight.Bold)
                 Row(verticalAlignment = Alignment.CenterVertically) {
                     Icon(Icons.Filled.Schedule, null, tint = bodyColor, modifier = Modifier.size(14.dp))
                     Spacer(Modifier.width(5.dp))
@@ -791,9 +791,9 @@ private fun ArticleReaderScreen(
                 Column {
                     Text("SECTION ${index + 1}", color = Blue, fontSize = 10.sp, fontWeight = FontWeight.Bold, letterSpacing = 1.1.sp)
                     Spacer(Modifier.height(5.dp))
-                    Text(sections[index].title, color = foreground, fontSize = (fontSize + 2).sp, fontWeight = FontWeight.Bold, lineHeight = (fontSize * 1.45f).sp)
+                    Text(sections[index].title, color = foreground, fontFamily = androidx.compose.ui.text.font.FontFamily.Serif, fontSize = (fontSize + 3).sp, fontWeight = FontWeight.Bold, lineHeight = (fontSize * 1.5f).sp)
                     Spacer(Modifier.height(8.dp))
-                    Text(sections[index].body, color = bodyColor, fontSize = fontSize.sp, lineHeight = (fontSize * 1.7f).sp)
+                    Text(sections[index].body, color = bodyColor, fontFamily = androidx.compose.ui.text.font.FontFamily.Serif, fontSize = fontSize.sp, lineHeight = (fontSize * 1.8f).sp)
                 }
             }
             item {
