@@ -889,7 +889,7 @@ private fun PersonalLibraryScreen(
         Spacer(Modifier.height(12.dp))
         if (section == "History" && recentStories.isNotEmpty()) {
             Card(
-                colors = CardDefaults.cardColors(containerColor = Color(0xFFEAF0FF)),
+                colors = CardDefaults.cardColors(containerColor = Color(0xFFE8EEE7)),
                 shape = RoundedCornerShape(16.dp),
                 modifier = Modifier.fillMaxWidth().padding(bottom = 10.dp)
             ) {
@@ -903,10 +903,62 @@ private fun PersonalLibraryScreen(
         }
         when (section) {
             "Saved" -> {
-                Text("${savedStories.size} saved articles", color = Blue, fontWeight = FontWeight.SemiBold, fontSize = 12.sp)
-                if (savedStories.isEmpty()) Text("No saved articles yet. Tap the bookmark icon on any story to keep it here.", color = Color.Gray, modifier = Modifier.padding(top = 20.dp))
-                else LazyColumn(verticalArrangement = Arrangement.spacedBy(12.dp)) {
-                    items(savedStories) { story -> StoryCard(story, true, onSave = { onToggleSaved(story.title) }, onOpen = { onOpenStory(story) }) }
+                LazyColumn(
+                    modifier = Modifier.fillMaxSize(),
+                    verticalArrangement = Arrangement.spacedBy(12.dp),
+                    contentPadding = PaddingValues(bottom = 20.dp)
+                ) {
+                    item {
+                        Row(verticalAlignment = Alignment.CenterVertically) {
+                            Column(Modifier.weight(1f)) {
+                                Text("Saved Articles", color = Navy, fontFamily = androidx.compose.ui.text.font.FontFamily.Serif, fontSize = 23.sp, fontWeight = FontWeight.Bold)
+                                Text("${savedStories.size} articles in your collection", color = Color.Gray, fontSize = 11.sp)
+                            }
+                            Icon(Icons.Filled.Bookmarks, null, tint = Color(0xFFC8795D), modifier = Modifier.size(25.dp))
+                        }
+                    }
+                    if (savedStories.isEmpty()) {
+                        item {
+                            Column(Modifier.fillMaxWidth().padding(vertical = 28.dp), horizontalAlignment = Alignment.CenterHorizontally) {
+                                Icon(Icons.Filled.BookmarkBorder, null, tint = Color(0xFF8FA99A), modifier = Modifier.size(42.dp))
+                                Spacer(Modifier.height(10.dp))
+                                Text("Your reading shelf is waiting", color = Navy, fontFamily = androidx.compose.ui.text.font.FontFamily.Serif, fontSize = 18.sp, fontWeight = FontWeight.Bold)
+                                Text("Bookmark an article to keep it close.", color = Color.Gray, fontSize = 12.sp)
+                            }
+                        }
+                    } else {
+                        items(savedStories.chunked(2)) { rowStories ->
+                            Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(12.dp)) {
+                                rowStories.forEach { story ->
+                                    CompactStoryCard(story, true, Modifier.weight(1f),
+                                        onSave = { onToggleSaved(story.title) }, onOpen = { onOpenStory(story) })
+                                }
+                                if (rowStories.size == 1) Spacer(Modifier.weight(1f))
+                            }
+                        }
+                    }
+                    item {
+                        Spacer(Modifier.height(8.dp))
+                        Text("Daily Briefing", color = Navy, fontFamily = androidx.compose.ui.text.font.FontFamily.Serif, fontSize = 23.sp, fontWeight = FontWeight.Bold)
+                        Text("A little knowledge, every day", color = Color.Gray, fontSize = 11.sp)
+                    }
+                    items(stories.take(3)) { story ->
+                        Card(
+                            modifier = Modifier.fillMaxWidth().clickable { onOpenStory(story) },
+                            shape = RoundedCornerShape(16.dp),
+                            colors = CardDefaults.cardColors(containerColor = Color(0xFFFFFEFA))
+                        ) {
+                            Column(Modifier.padding(14.dp)) {
+                                Text(story.category.uppercase(), color = Color(0xFF718B7C), fontSize = 9.sp, fontWeight = FontWeight.Bold, letterSpacing = 1.sp)
+                                Spacer(Modifier.height(4.dp))
+                                Text(story.title, color = Navy, fontFamily = androidx.compose.ui.text.font.FontFamily.Serif, fontSize = 17.sp, fontWeight = FontWeight.Bold)
+                                Spacer(Modifier.height(5.dp))
+                                Text(story.summary, color = Color(0xFF59615C), fontSize = 12.sp, lineHeight = 17.sp, maxLines = 3)
+                                Spacer(Modifier.height(7.dp))
+                                Text("Read briefing  →", color = Color(0xFF718B7C), fontSize = 11.sp, fontWeight = FontWeight.Bold)
+                            }
+                        }
+                    }
                 }
             }
             "History" -> {
