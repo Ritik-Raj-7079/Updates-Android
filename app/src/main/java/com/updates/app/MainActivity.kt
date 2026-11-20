@@ -921,7 +921,7 @@ private fun PersonalLibraryScreen(
                 Column(Modifier.fillMaxWidth().weight(1f)) {
                     Text("${savedBooks.size} saved catalogue books", color = Blue, fontWeight = FontWeight.SemiBold, fontSize = 12.sp)
                     Spacer(Modifier.height(8.dp))
-                    DigitalLibraryScreen(savedBooks, onToggleBook)
+                    DigitalLibraryScreen(savedBooks, onToggleBook, savedOnly = true)
                 }
             }
         }
