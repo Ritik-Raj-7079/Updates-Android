@@ -29,10 +29,10 @@ import kotlinx.coroutines.launch
 import org.json.JSONArray
 import org.json.JSONObject
 
-private val Navy = Color(0xFF071A57)
-private val Blue = Color(0xFF155EEF)
-private val Orange = Color(0xFFFF9900)
-private val Page = Color(0xFFF5F7FC)
+private val Navy = Color(0xFF263238)
+private val Blue = Color(0xFF8FA99A)
+private val Orange = Color(0xFFC8795D)
+private val Page = Color(0xFFF6F3E9)
 private val Topics = listOf(
     "Technology", "Science", "Research", "Education", "History",
     "Environment", "Literature", "Business", "Space", "Health"
@@ -253,9 +253,11 @@ private fun UpdatesApp(
     MaterialTheme(
         colorScheme = lightColorScheme(
             primary = Blue,
+            onPrimary = Color(0xFF263238),
             secondary = Orange,
             background = Page,
-            surface = Color.White
+            surface = Color(0xFFFFFEFA),
+            onSurface = Navy
         )
     ) {
         BackHandler(enabled = !showOnboarding) {
@@ -538,7 +540,7 @@ private fun MainDashboard(
                         onClick = { onTabSelected(tab) },
                         icon = { Icon(icon, contentDescription = tab) },
                         label = { Text(tab) },
-                        colors = NavigationBarItemDefaults.colors(selectedIconColor = Blue, selectedTextColor = Blue)
+                        colors = NavigationBarItemDefaults.colors(selectedIconColor = Color(0xFF536F60), selectedTextColor = Color(0xFF536F60), indicatorColor = Color(0xFFE5EBE2))
                     )
                 }
             }
@@ -585,24 +587,24 @@ private fun HomeScreen(
             Row(verticalAlignment = Alignment.CenterVertically) {
                 BrandMark(40); Spacer(Modifier.width(10.dp))
                 Column(Modifier.weight(1f)) {
-                    Text("UPDATES", color = Navy, fontWeight = FontWeight.ExtraBold, fontSize = 19.sp, letterSpacing = 1.2.sp)
-                    Text("Your space for ideas & discovery", color = Color.Gray, fontSize = 10.sp)
+                    Text("Updates", color = Navy, fontFamily = androidx.compose.ui.text.font.FontFamily.Serif, fontWeight = FontWeight.Bold, fontSize = 25.sp)
+                    Text("Build Your Own Treasure of Knowledge", color = Color(0xFF68756D), fontSize = 10.sp)
                 }
                 IconButton(onClick = onProfileClick) { Icon(Icons.Filled.AccountCircle, contentDescription = "Profile", tint = Navy) }
             }
         }
         item {
-            Column(Modifier.fillMaxWidth().background(Navy, RoundedCornerShape(24.dp)).padding(21.dp)) {
-                Text("THE KNOWLEDGE JOURNEY", color = Orange, fontSize = 10.sp, fontWeight = FontWeight.Bold, letterSpacing = 1.4.sp)
+            Column(Modifier.fillMaxWidth().background(Color(0xFF8FA99A), RoundedCornerShape(24.dp)).padding(21.dp)) {
+                Text("THE KNOWLEDGE JOURNEY", color = Color(0xFF263238), fontSize = 10.sp, fontWeight = FontWeight.Bold, letterSpacing = 1.4.sp)
                 Spacer(Modifier.height(8.dp))
                 Text("Ideas worth reading.\nKnowledge worth keeping.", color = Color.White, fontSize = 26.sp, fontWeight = FontWeight.ExtraBold, lineHeight = 32.sp)
                 Spacer(Modifier.height(9.dp))
-                Text("Discover new perspectives, one story at a time.", color = Color(0xFFDCE5FF), fontSize = 13.sp)
+                Text("Discover new perspectives, one story at a time.", color = Color(0xFF34443D), fontSize = 13.sp)
                 Spacer(Modifier.height(15.dp))
                 Row(verticalAlignment = Alignment.CenterVertically) {
                     Icon(Icons.Filled.AutoStories, null, tint = Orange, modifier = Modifier.size(18.dp))
                     Spacer(Modifier.width(7.dp))
-                    Text("Read · Explore · Save · Learn", color = Color.White, fontSize = 11.sp, fontWeight = FontWeight.SemiBold)
+                    Text("Read · Explore · Save · Learn", color = Color(0xFF263238), fontSize = 11.sp, fontWeight = FontWeight.SemiBold)
                 }
             }
         }
@@ -630,17 +632,17 @@ private fun HomeScreen(
             item {
                 val featured = filtered.first()
                 Column(Modifier.fillMaxWidth().background(Color.White, RoundedCornerShape(22.dp)).clickable { onOpenStory(featured) }) {
-                    Box(Modifier.fillMaxWidth().height(132.dp).background(Blue, RoundedCornerShape(topStart = 22.dp, topEnd = 22.dp)), contentAlignment = Alignment.Center) {
+                    Box(Modifier.fillMaxWidth().height(132.dp).background(Color(0xFFB9C8BA), RoundedCornerShape(topStart = 22.dp, topEnd = 22.dp)), contentAlignment = Alignment.Center) {
                         Column(horizontalAlignment = Alignment.CenterHorizontally) {
-                            Icon(Icons.Filled.AutoStories, null, tint = Color.White, modifier = Modifier.size(40.dp))
+                            Icon(Icons.Filled.AutoStories, null, tint = Color(0xFF263238), modifier = Modifier.size(40.dp))
                             Spacer(Modifier.height(5.dp))
-                            Text("FEATURED READING", color = Color.White, fontSize = 10.sp, fontWeight = FontWeight.Bold, letterSpacing = 1.5.sp)
+                            Text("FEATURED READING", color = Color(0xFF263238), fontSize = 10.sp, fontWeight = FontWeight.Bold, letterSpacing = 1.5.sp)
                         }
                     }
                     Column(Modifier.padding(16.dp)) {
                         Text(featured.category, color = Blue, fontSize = 10.sp, fontWeight = FontWeight.Bold, letterSpacing = 1.sp)
                         Spacer(Modifier.height(6.dp))
-                        Text(featured.title, color = Navy, fontSize = 20.sp, lineHeight = 25.sp, fontWeight = FontWeight.ExtraBold)
+                        Text(featured.title, color = Navy, fontFamily = androidx.compose.ui.text.font.FontFamily.Serif, fontSize = 22.sp, lineHeight = 27.sp, fontWeight = FontWeight.Bold)
                         Spacer(Modifier.height(6.dp))
                         Text(featured.summary, color = Color.DarkGray, fontSize = 13.sp, lineHeight = 19.sp, maxLines = 3)
                         Spacer(Modifier.height(12.dp))
@@ -664,7 +666,7 @@ private fun HomeScreen(
 @Composable
 private fun SectionTitle(title: String, subtitle: String) {
     Column {
-        Text(title, color = Navy, fontSize = 19.sp, fontWeight = FontWeight.Bold)
+        Text(title, color = Navy, fontFamily = androidx.compose.ui.text.font.FontFamily.Serif, fontSize = 21.sp, fontWeight = FontWeight.Bold)
         Text(subtitle, color = Color.Gray, fontSize = 12.sp)
     }
 }
@@ -682,7 +684,7 @@ private fun StoryCard(story: Story, isSaved: Boolean, onSave: () -> Unit, onOpen
             }
         }
         Spacer(Modifier.height(5.dp))
-        Text(story.title, color = Navy, fontSize = 18.sp, fontWeight = FontWeight.Bold, lineHeight = 24.sp)
+        Text(story.title, color = Navy, fontFamily = androidx.compose.ui.text.font.FontFamily.Serif, fontSize = 19.sp, fontWeight = FontWeight.Bold, lineHeight = 25.sp)
         Spacer(Modifier.height(7.dp))
         Text(story.summary, color = Color(0xFF4B5563), fontSize = 13.sp, lineHeight = 20.sp, maxLines = 3)
         Spacer(Modifier.height(13.dp))
@@ -876,7 +878,7 @@ private fun PersonalLibraryScreen(
     val savedStories = stories.filter { it.title in savedTitles }
     val recentStories = history.mapNotNull { title -> stories.find { it.title == title } }
     Column(Modifier.fillMaxSize().background(Page).padding(horizontal = 18.dp, vertical = 16.dp)) {
-        Text("My Library", color = Navy, fontSize = 25.sp, fontWeight = FontWeight.ExtraBold)
+        Text("My Library", color = Navy, fontFamily = androidx.compose.ui.text.font.FontFamily.Serif, fontSize = 27.sp, fontWeight = FontWeight.Bold)
         Text("Your personal space for saved and recent reading", color = Color.Gray, fontSize = 12.sp)
         Spacer(Modifier.height(16.dp))
         Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
