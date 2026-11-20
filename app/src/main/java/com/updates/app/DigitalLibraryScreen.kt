@@ -110,7 +110,7 @@ fun DigitalLibraryScreen(savedTitles: Set<String>, onToggleSaved: (String) -> Un
                                 LibraryBook(key, title, authorText, item.optString("first_publish_date", "Year not listed"), "—", if (accessId.isNotBlank()) "public" else "no_ebook", accessId.isNotBlank(), accessId)
                             } finally { connection.disconnect() }
                         } catch (_: Exception) { null }
-                    }.filter { it.title.contains(submittedQuery, ignoreCase = true) || submittedQuery.equals("science", true) }
+                    }
                 } else {
                     val encoded = java.net.URLEncoder.encode(submittedQuery, "UTF-8")
                     val connection = URL("https://openlibrary.org/search.json?q=$encoded&limit=25&fields=key,title,author_name,first_publish_year,edition_count,ebook_access,has_fulltext,ia").openConnection() as HttpURLConnection
@@ -147,14 +147,16 @@ fun DigitalLibraryScreen(savedTitles: Set<String>, onToggleSaved: (String) -> Un
         Text(if (savedOnly) "Saved Books" else "Digital Library", color = Color(0xFF071A57), fontSize = 24.sp, fontWeight = FontWeight.ExtraBold)
         Text(if (savedOnly) "Your bookmarked catalogue books" else "Discover books from the Open Library catalogue", color = Color.Gray, fontSize = 12.sp)
         Spacer(Modifier.height(14.dp))
-        OutlinedTextField(
-            value = query, onValueChange = { query = it }, modifier = Modifier.fillMaxWidth(),
-            placeholder = { Text("Search books, authors or subjects") },
-            leadingIcon = { Icon(Icons.Filled.Search, contentDescription = null) },
-            trailingIcon = { IconButton(onClick = { if (query.isNotBlank()) submittedQuery = query.trim() }) { Icon(Icons.Filled.ArrowForward, contentDescription = "Search") } },
-            singleLine = true, shape = RoundedCornerShape(15.dp),
-            colors = OutlinedTextFieldDefaults.colors(unfocusedContainerColor = Color.White, focusedContainerColor = Color.White)
-        )
+        if (!savedOnly) {
+            OutlinedTextField(
+                value = query, onValueChange = { query = it }, modifier = Modifier.fillMaxWidth(),
+                placeholder = { Text("Search books, authors or subjects") },
+                leadingIcon = { Icon(Icons.Filled.Search, contentDescription = null) },
+                trailingIcon = { IconButton(onClick = { if (query.isNotBlank()) submittedQuery = query.trim() }) { Icon(Icons.Filled.ArrowForward, contentDescription = "Search") } },
+                singleLine = true, shape = RoundedCornerShape(15.dp),
+                colors = OutlinedTextFieldDefaults.colors(unfocusedContainerColor = Color.White, focusedContainerColor = Color.White)
+            )
+            }
         Spacer(Modifier.height(10.dp))
         Text(if (savedOnly) "YOUR COLLECTION" else "BOOK DISCOVERY", color = Color(0xFF155EEF), fontSize = 10.sp, fontWeight = FontWeight.Bold, letterSpacing = 1.sp)
         Spacer(Modifier.height(8.dp))
