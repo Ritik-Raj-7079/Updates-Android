@@ -37,7 +37,7 @@ private data class LibraryBook(
 )
 
 @Composable
-fun DigitalLibraryScreen(savedTitles: Set<String>, onToggleSaved: (String) -> Unit) {
+fun DigitalLibraryScreen(savedTitles: Set<String>, onToggleSaved: (String) -> Unit, savedOnly: Boolean = false) {
     var query by remember { mutableStateOf("science") }
     var submittedQuery by remember { mutableStateOf("science") }
     var books by remember { mutableStateOf<List<LibraryBook>>(emptyList()) }
@@ -87,34 +87,55 @@ fun DigitalLibraryScreen(savedTitles: Set<String>, onToggleSaved: (String) -> Un
         }
     }
 
-    LaunchedEffect(submittedQuery) {
+    LaunchedEffect(submittedQuery, savedTitles, savedOnly) {
         loading = true
         error = null
         try {
             books = withContext(Dispatchers.IO) {
-                val encoded = java.net.URLEncoder.encode(submittedQuery, "UTF-8")
-                val connection = URL("https://openlibrary.org/search.json?q=$encoded&limit=25&fields=key,title,author_name,first_publish_year,edition_count,ebook_access,has_fulltext,ia").openConnection() as HttpURLConnection
-                connection.requestMethod = "GET"
-                connection.connectTimeout = 12000
-                connection.readTimeout = 12000
-                try {
-                    val body = connection.inputStream.bufferedReader().use { it.readText() }
-                    val docs = JSONObject(body).optJSONArray("docs")
-                    buildList {
-                        if (docs != null) for (i in 0 until docs.length()) {
-                            val item = docs.optJSONObject(i) ?: continue
-                            val key = item.optString("key", "")
-                            val title = item.optString("title", "Untitled")
-                            if (key.isNotBlank() && title.isNotBlank()) {
-                                val authors = item.optJSONArray("author_name")
-                                val authorText = if (authors != null && authors.length() > 0) authors.optString(0) else "Author not listed"
-                                val archiveIds = item.optJSONArray("ia")
-                                val archiveId = if (archiveIds != null && archiveIds.length() > 0) archiveIds.optString(0) else ""
-                                add(LibraryBook(key, title, authorText, item.optInt("first_publish_year", 0).let { if (it > 0) it.toString() else "Year not listed" }, item.optInt("edition_count", 0).toString(), item.optString("ebook_access", "no_ebook"), item.optBoolean("has_fulltext", false), archiveId))
+                if (savedOnly) {
+                    savedTitles.toList().mapNotNull { key ->
+                        try {
+                            val connection = URL("https://openlibrary.org$key.json").openConnection() as HttpURLConnection
+                            connection.connectTimeout = 10000
+                            connection.readTimeout = 10000
+                            try {
+                                val item = JSONObject(connection.inputStream.bufferedReader().use { it.readText() })
+                                val title = item.optString("title", "Untitled")
+                                val rawAuthors = item.optJSONArray("authors")
+                                val authorText = if (rawAuthors != null && rawAuthors.length() > 0) {
+                                    rawAuthors.optJSONObject(0)?.optJSONObject("author")?.optString("key")?.substringAfterLast("/") ?: "Author not listed"
+                                } else "Author not listed"
+                                val descriptionValue = item.opt("description")
+                                val accessId = item.optString("ocaid", "")
+                                LibraryBook(key, title, authorText, item.optString("first_publish_date", "Year not listed"), "—", if (accessId.isNotBlank()) "public" else "no_ebook", accessId.isNotBlank(), accessId)
+                            } finally { connection.disconnect() }
+                        } catch (_: Exception) { null }
+                    }.filter { it.title.contains(submittedQuery, ignoreCase = true) || submittedQuery.equals("science", true) }
+                } else {
+                    val encoded = java.net.URLEncoder.encode(submittedQuery, "UTF-8")
+                    val connection = URL("https://openlibrary.org/search.json?q=$encoded&limit=25&fields=key,title,author_name,first_publish_year,edition_count,ebook_access,has_fulltext,ia").openConnection() as HttpURLConnection
+                    connection.requestMethod = "GET"
+                    connection.connectTimeout = 12000
+                    connection.readTimeout = 12000
+                    try {
+                        val body = connection.inputStream.bufferedReader().use { it.readText() }
+                        val docs = JSONObject(body).optJSONArray("docs")
+                        buildList {
+                            if (docs != null) for (i in 0 until docs.length()) {
+                                val item = docs.optJSONObject(i) ?: continue
+                                val key = item.optString("key", "")
+                                val title = item.optString("title", "Untitled")
+                                if (key.isNotBlank() && title.isNotBlank()) {
+                                    val authors = item.optJSONArray("author_name")
+                                    val authorText = if (authors != null && authors.length() > 0) authors.optString(0) else "Author not listed"
+                                    val archiveIds = item.optJSONArray("ia")
+                                    val archiveId = if (archiveIds != null && archiveIds.length() > 0) archiveIds.optString(0) else ""
+                                    add(LibraryBook(key, title, authorText, item.optInt("first_publish_year", 0).let { if (it > 0) it.toString() else "Year not listed" }, item.optInt("edition_count", 0).toString(), item.optString("ebook_access", "no_ebook"), item.optBoolean("has_fulltext", false), archiveId))
+                                }
                             }
                         }
-                    }
-                } finally { connection.disconnect() }
+                    } finally { connection.disconnect() }
+                }
             }
         } catch (_: Exception) {
             error = "Couldn't load books. Check your internet connection and try again."
@@ -123,8 +144,8 @@ fun DigitalLibraryScreen(savedTitles: Set<String>, onToggleSaved: (String) -> Un
     }
 
     Column(Modifier.fillMaxSize().background(Color(0xFFF5F7FC)).padding(horizontal = 18.dp, vertical = 16.dp)) {
-        Text("Digital Library", color = Color(0xFF071A57), fontSize = 24.sp, fontWeight = FontWeight.ExtraBold)
-        Text("Discover books from the Open Library catalogue", color = Color.Gray, fontSize = 12.sp)
+        Text(if (savedOnly) "Saved Books" else "Digital Library", color = Color(0xFF071A57), fontSize = 24.sp, fontWeight = FontWeight.ExtraBold)
+        Text(if (savedOnly) "Your bookmarked catalogue books" else "Discover books from the Open Library catalogue", color = Color.Gray, fontSize = 12.sp)
         Spacer(Modifier.height(14.dp))
         OutlinedTextField(
             value = query, onValueChange = { query = it }, modifier = Modifier.fillMaxWidth(),
@@ -135,14 +156,14 @@ fun DigitalLibraryScreen(savedTitles: Set<String>, onToggleSaved: (String) -> Un
             colors = OutlinedTextFieldDefaults.colors(unfocusedContainerColor = Color.White, focusedContainerColor = Color.White)
         )
         Spacer(Modifier.height(10.dp))
-        Text("BOOK DISCOVERY", color = Color(0xFF155EEF), fontSize = 10.sp, fontWeight = FontWeight.Bold, letterSpacing = 1.sp)
+        Text(if (savedOnly) "YOUR COLLECTION" else "BOOK DISCOVERY", color = Color(0xFF155EEF), fontSize = 10.sp, fontWeight = FontWeight.Bold, letterSpacing = 1.sp)
         Spacer(Modifier.height(8.dp))
         if (loading) {
             Box(Modifier.fillMaxWidth().weight(1f), contentAlignment = Alignment.Center) { CircularProgressIndicator(color = Color(0xFF155EEF)) }
         } else if (error != null) {
             Text(error!!, color = Color(0xFFB42318), modifier = Modifier.padding(vertical = 20.dp))
         } else if (books.isEmpty()) {
-            Text("No books found. Try another search.", color = Color.Gray, modifier = Modifier.padding(vertical = 20.dp))
+            Text(if (savedOnly) "No saved books yet. Search the Digital Library and tap the bookmark icon to add books here." else "No books found. Try another search.", color = Color.Gray, modifier = Modifier.padding(vertical = 20.dp))
         } else {
             LazyColumn(verticalArrangement = Arrangement.spacedBy(10.dp), contentPadding = PaddingValues(bottom = 20.dp)) {
                 items(books) { book ->
