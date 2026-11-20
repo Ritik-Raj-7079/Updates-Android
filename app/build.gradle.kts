@@ -5,6 +5,26 @@ plugins {
     id("com.google.gms.google-services")
 }
 
+val releaseStoreFile = System.getenv("UPDATES_RELEASE_STORE_FILE")
+val releaseStorePassword = System.getenv("UPDATES_RELEASE_STORE_PASSWORD")
+val releaseKeyAlias = System.getenv("UPDATES_RELEASE_KEY_ALIAS")
+val releaseKeyPassword = System.getenv("UPDATES_RELEASE_KEY_PASSWORD")
+val hasReleaseSigning = listOf(
+    releaseStoreFile, releaseStorePassword, releaseKeyAlias, releaseKeyPassword
+).all { !it.isNullOrBlank() }
+
+val releaseTaskRequested = gradle.startParameter.taskNames.any {
+    it.contains("assembleRelease", ignoreCase = true) ||
+        it.contains("bundleRelease", ignoreCase = true)
+}
+if (releaseTaskRequested && !hasReleaseSigning) {
+    throw GradleException(
+        "Release signing is not configured. Set UPDATES_RELEASE_STORE_FILE, " +
+            "UPDATES_RELEASE_STORE_PASSWORD, UPDATES_RELEASE_KEY_ALIAS and " +
+            "UPDATES_RELEASE_KEY_PASSWORD in the build environment."
+    )
+}
+
 android {
     namespace = "com.updates.app"
     compileSdk = 35
@@ -15,6 +35,26 @@ android {
         targetSdk = 35
         versionCode = 1
         versionName = "1.0.0"
+    }
+
+    signingConfigs {
+        if (hasReleaseSigning) {
+            create("release") {
+                storeFile = file(releaseStoreFile!!)
+                storePassword = releaseStorePassword
+                keyAlias = releaseKeyAlias
+                keyPassword = releaseKeyPassword
+            }
+        }
+    }
+
+    buildTypes {
+        getByName("release") {
+            isMinifyEnabled = false
+            if (hasReleaseSigning) {
+                signingConfig = signingConfigs.getByName("release")
+            }
+        }
     }
 
     buildFeatures { compose = true }
