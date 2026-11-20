@@ -659,6 +659,7 @@ private fun ArticleReaderScreen(
     onSave: () -> Unit
 ) {
     val readerListState = androidx.compose.foundation.lazy.rememberLazyListState(initialFirstVisibleItemIndex = initialProgress.coerceIn(0, 2))
+    val readerScope = rememberCoroutineScope()
     LaunchedEffect(readerListState) {
         androidx.compose.runtime.snapshotFlow { readerListState.firstVisibleItemIndex }
             .collect { onProgressChange(it) }
@@ -687,6 +688,15 @@ private fun ArticleReaderScreen(
             LinearProgressIndicator(progress = { readerProgress }, modifier = Modifier.weight(1f).height(5.dp), color = Blue, trackColor = if (readingTheme == 1) Color.DarkGray else Color(0xFFDCE3EF))
             Spacer(Modifier.width(10.dp))
             Text("${(readerProgress * 100).toInt()}%", color = bodyColor, fontSize = 11.sp, fontWeight = FontWeight.SemiBold)
+        }
+        Row(Modifier.fillMaxWidth().padding(horizontal = 12.dp), horizontalArrangement = Arrangement.SpaceBetween, verticalAlignment = Alignment.CenterVertically) {
+            TextButton(onClick = { readerScope.launch { readerListState.animateScrollToItem((readerListState.firstVisibleItemIndex - 1).coerceAtLeast(0)) } }) {
+                Icon(Icons.Filled.KeyboardArrowUp, contentDescription = null); Text("Previous section", fontSize = 11.sp)
+            }
+            Text("Section ${readerListState.firstVisibleItemIndex + 1} of 3", color = bodyColor, fontSize = 10.sp)
+            TextButton(onClick = { readerScope.launch { readerListState.animateScrollToItem((readerListState.firstVisibleItemIndex + 1).coerceAtMost(2)) } }) {
+                Text("Next section", fontSize = 11.sp); Icon(Icons.Filled.KeyboardArrowDown, contentDescription = null)
+            }
         }
         LazyColumn(state = readerListState, modifier = Modifier.fillMaxSize(), contentPadding = PaddingValues(horizontal = 24.dp, vertical = 18.dp), verticalArrangement = Arrangement.spacedBy(16.dp)) {
             item {
