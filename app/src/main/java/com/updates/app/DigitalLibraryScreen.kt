@@ -93,23 +93,24 @@ fun DigitalLibraryScreen(savedTitles: Set<String>, onToggleSaved: (String) -> Un
         try {
             books = withContext(Dispatchers.IO) {
                 if (savedOnly) {
-                    savedTitles.toList().mapNotNull { key ->
+                    // Always render saved work keys: a catalogue outage must not make
+                    // bookmarks disappear. Metadata is optional and falls back visibly.
+                    savedTitles.toList().map { key ->
+                        val fallbackTitle = "Saved book (" + key.substringAfterLast("/").ifBlank { key } + ")"
                         try {
-                            val connection = URL("https://openlibrary.org$key.json").openConnection() as HttpURLConnection
+                            val connection = URL("https://openlibrary.org" + key + ".json").openConnection() as HttpURLConnection
+                            connection.requestMethod = "GET"
                             connection.connectTimeout = 10000
                             connection.readTimeout = 10000
                             try {
                                 val item = JSONObject(connection.inputStream.bufferedReader().use { it.readText() })
-                                val title = item.optString("title", "Untitled")
-                                val rawAuthors = item.optJSONArray("authors")
-                                val authorText = if (rawAuthors != null && rawAuthors.length() > 0) {
-                                    rawAuthors.optJSONObject(0)?.optJSONObject("author")?.optString("key")?.substringAfterLast("/") ?: "Author not listed"
-                                } else "Author not listed"
-                                val descriptionValue = item.opt("description")
+                                val title = item.optString("title").ifBlank { fallbackTitle }
                                 val accessId = item.optString("ocaid", "")
-                                LibraryBook(key, title, authorText, item.optString("first_publish_date", "Year not listed"), "—", if (accessId.isNotBlank()) "public" else "no_ebook", accessId.isNotBlank(), accessId)
+                                LibraryBook(key, title, "Author not listed", item.optString("first_publish_date", "Year not listed"), "—", if (accessId.isNotBlank()) "public" else "no_ebook", accessId.isNotBlank(), accessId)
                             } finally { connection.disconnect() }
-                        } catch (_: Exception) { null }
+                        } catch (_: Exception) {
+                            LibraryBook(key, fallbackTitle, "Catalogue details temporarily unavailable", "—", "—", "no_ebook", false, "")
+                        }
                     }
                 } else {
                     val encoded = java.net.URLEncoder.encode(submittedQuery, "UTF-8")
