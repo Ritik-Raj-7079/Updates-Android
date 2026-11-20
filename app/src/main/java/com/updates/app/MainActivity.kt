@@ -116,11 +116,14 @@ class MainActivity : ComponentActivity() {
     }
 }
 
+private data class StorySection(val title: String, val body: String)
+
 private data class Story(
     val category: String,
     val title: String,
     val summary: String,
-    val readTime: String
+    val readTime: String,
+    val sections: List<StorySection> = emptyList()
 )
 
 @Composable
@@ -190,17 +193,61 @@ private fun UpdatesApp(
     var selectedFeedCategory by remember { mutableStateOf("For You") }
 
     val stories = listOf(
-        Story("TECHNOLOGY", "How artificial intelligence is changing everyday life", "A beginner-friendly look at the ideas and tools shaping the next generation of technology.", "5 min read"),
-        Story("SCIENCE", "The science of a healthier planet", "Explore how researchers are studying climate, energy and sustainable solutions.", "7 min read"),
-        Story("RESEARCH", "Inside the world of open scientific research", "Learn how research papers are shared, reviewed and used to build new knowledge.", "8 min read"),
-        Story("EDUCATION", "Small learning habits that make a big difference", "Practical ways to stay curious, organize ideas and keep learning every day.", "4 min read"),
-        Story("HISTORY", "How ancient ideas shaped the modern world", "Discover the connections between historical discoveries and life today.", "6 min read"),
-        Story("SPACE", "A closer look at distant galaxies", "Explore how astronomers study objects far beyond our solar system.", "6 min read"),
-        Story("ENVIRONMENT", "Everyday choices for a cleaner environment", "Discover practical ideas for reducing waste, saving resources and understanding environmental challenges.", "5 min read"),
-        Story("LITERATURE", "Why stories remain powerful across generations", "Explore how books and storytelling preserve ideas, cultures and human experiences.", "6 min read"),
-        Story("BUSINESS", "How small businesses turn ideas into value", "A simple introduction to customers, planning, innovation and responsible business growth.", "5 min read"),
-        Story("HEALTH", "Understanding the science of good sleep", "Learn why sleep matters for learning, focus and everyday wellbeing.", "4 min read"),
-        Story("NEWS", "How to read the news with a critical mind", "Learn to check sources, compare reports and separate verified information from opinion.", "4 min read")
+        Story("TECHNOLOGY", "How artificial intelligence is changing everyday life", "A beginner-friendly look at the ideas and tools shaping the next generation of technology.", "5 min read", listOf(
+            StorySection("What AI means", "Artificial intelligence (AI) is a broad field of computing that builds systems able to perform tasks that usually require human-like abilities, such as recognizing patterns, understanding language and making predictions. Most modern applications learn statistical patterns from examples rather than following only a fixed list of instructions."),
+            StorySection("AI around us", "Recommendation systems help organize music, videos and shopping suggestions. Maps estimate travel times, email services filter unwanted messages, and phones use AI for speech recognition and photography. These tools can save time, but their results are not always correct and should be checked when decisions matter."),
+            StorySection("Opportunities and responsibility", "AI can support medical research, accessibility, education and scientific discovery. It can also produce errors, reflect unfair patterns in training data or raise privacy concerns. Responsible use means protecting personal information, checking important claims, keeping people involved in high-impact decisions and understanding the limits of each tool.")
+        )),
+        Story("SCIENCE", "The science of a healthier planet", "Explore how researchers are studying climate, energy and sustainable solutions.", "7 min read", listOf(
+            StorySection("Understanding the challenge", "Earth's climate is influenced by energy from the Sun, the atmosphere, oceans, land and living systems. Human activities add greenhouse gases such as carbon dioxide and methane to the atmosphere. These gases slow the escape of heat into space, contributing to long-term warming and changes in weather patterns."),
+            StorySection("Measuring change", "Scientists study the climate using weather stations, ocean buoys, satellites, ice cores and computer models. No single measurement tells the whole story. Researchers compare many independent records over long periods to identify trends, understand regional differences and estimate possible future conditions."),
+            StorySection("Solutions and adaptation", "Cleaner electricity, efficient buildings, public transport, ecosystem protection and reduced waste can lower environmental pressures. Communities also prepare for impacts through heat plans, flood management and resilient infrastructure. Effective solutions combine reliable evidence, practical design and cooperation across society.")
+        )),
+        Story("RESEARCH", "Inside the world of open scientific research", "Learn how research papers are shared, reviewed and used to build new knowledge.", "8 min read", listOf(
+            StorySection("From question to study", "Research often begins with a focused question. A team reviews earlier work, chooses a method, gathers observations or data, and analyzes the results. A clear method helps other researchers understand what was done and judge whether the evidence supports the conclusions."),
+            StorySection("Publication and peer review", "Researchers may submit a paper to a scholarly journal, where editors and reviewers assess its relevance, methods and clarity. Peer review can improve a paper, but it does not guarantee that every result is correct. Readers should still consider sample size, limitations, conflicts of interest and whether other studies reach similar findings."),
+            StorySection("Open access and careful reading", "Open access makes research outputs available to read without a subscription, although reuse terms can differ. Abstracts provide a quick overview, while methods, results and limitations give essential context. A single paper is one contribution to a larger body of evidence, not automatically a final answer.")
+        )),
+        Story("EDUCATION", "Small learning habits that make a big difference", "Practical ways to stay curious, organize ideas and keep learning every day.", "4 min read", listOf(
+            StorySection("Make learning active", "Learning becomes more durable when you do something with new information. After reading a topic, close the material and explain the main idea in your own words. Solving a small problem, drawing a concept map or teaching the idea to someone else can reveal what you understand and what needs more practice."),
+            StorySection("Space and revisit practice", "Short, focused study sessions with breaks can make it easier to maintain attention. Revisiting a topic over several days is generally more effective for long-term memory than trying to learn everything in one sitting. A simple review schedule can include a quick recap the next day and another review later in the week."),
+            StorySection("Track understanding", "Keep notes of questions, examples and mistakes rather than copying every sentence. At the end of a session, write down what you can now explain and what remains unclear. Adjust your next session around those gaps, and remember that sleep, rest and a balanced routine support learning.")
+        )),
+        Story("HISTORY", "How ancient ideas shaped the modern world", "Discover the connections between historical discoveries and life today.", "6 min read", listOf(
+            StorySection("Ideas travel across cultures", "Knowledge has rarely developed in isolation. Trade, migration, translation and travel helped mathematics, medicine, astronomy, engineering and philosophy move between societies. As ideas crossed languages and regions, scholars adapted them to new problems and combined them with local knowledge."),
+            StorySection("Records preserve discoveries", "Written manuscripts, inscriptions, maps, tools and buildings provide evidence about earlier societies. Historians compare different sources because each record reflects the purpose and viewpoint of its creator. Archaeology adds material evidence that can confirm, complicate or challenge written accounts."),
+            StorySection("The past and the present", "Modern institutions and technologies often have long histories. Number systems, calendars, navigation methods, civic ideas and learning traditions changed over centuries. Studying these developments helps explain both continuity and change, while reminding us to understand historical people within the context of their own time.")
+        )),
+        Story("SPACE", "A closer look at distant galaxies", "Explore how astronomers study objects far beyond our solar system.", "6 min read", listOf(
+            StorySection("What a galaxy contains", "A galaxy is a large system of stars, gas, dust and dark matter held together by gravity. Galaxies come in different shapes, including spiral, elliptical and irregular forms. Our Solar System is located in the Milky Way, a spiral galaxy containing an enormous number of stars."),
+            StorySection("How astronomers observe them", "Telescopes collect light and other forms of electromagnetic radiation from distant objects. Different wavelengths reveal different features: visible light shows many stars, infrared observations can look through dust, and radio observations reveal gas and energetic processes. Spectra help scientists estimate composition, temperature and motion."),
+            StorySection("Looking back in time", "Light takes time to travel, so observing a very distant galaxy means seeing it as it was in the past. By comparing galaxies at different distances, astronomers study how galaxies formed and changed over cosmic history. Measurements have uncertainties, so conclusions are tested against multiple observations and models.")
+        )),
+        Story("ENVIRONMENT", "Everyday choices for a cleaner environment", "Discover practical ideas for reducing waste, saving resources and understanding environmental challenges.", "5 min read", listOf(
+            StorySection("Think about resources", "Products require materials, energy, water and transport before they reach consumers. Considering the full life cycle helps explain why reducing unnecessary purchases and choosing durable, repairable items can reduce environmental impacts. Reuse and sharing can also extend the useful life of products."),
+            StorySection("Waste and recycling", "Separating waste correctly makes recycling systems more effective, but not every material is accepted everywhere. Local rules matter. Preventing waste in the first place, avoiding unnecessary packaging and composting suitable organic waste can reduce the amount sent to disposal sites."),
+            StorySection("Small actions, shared systems", "Saving electricity and water, choosing lower-impact travel where practical and protecting local green spaces are useful steps. Individual choices matter most when supported by wider systems such as clean energy, accessible public transport and responsible product design. Community participation can help improve those systems.")
+        )),
+        Story("LITERATURE", "Why stories remain powerful across generations", "Explore how books and storytelling preserve ideas, cultures and human experiences.", "6 min read", listOf(
+            StorySection("Stories carry experience", "Stories allow readers to encounter places, decisions and perspectives beyond their own lives. Through characters and events, literature can explore friendship, conflict, identity, justice, courage and change. Different readers may interpret the same work in different ways because they bring different experiences to it."),
+            StorySection("Many forms of literature", "Literature includes novels, short stories, poetry, drama, essays, oral traditions and many other forms. Each form uses language differently. Poetry may rely on rhythm and imagery, while a novel can develop characters and ideas across a longer narrative. Oral storytelling also preserves knowledge through performance and memory."),
+            StorySection("Reading with attention", "Noticing setting, point of view, structure, repeated images and word choice can deepen understanding. Historical and cultural context can explain why a work mattered to its first audience, while discussion helps reveal interpretations that an individual reader may miss.")
+        )),
+        Story("BUSINESS", "How small businesses turn ideas into value", "A simple introduction to customers, planning, innovation and responsible business growth.", "5 min read", listOf(
+            StorySection("Start with a real need", "A business creates value by offering a product or service that people find useful. Before investing heavily, a founder can learn about potential customers, existing alternatives and the problem people want solved. Listening to feedback helps distinguish a promising idea from an assumption."),
+            StorySection("Plan the basics", "A practical plan describes the customer, the offer, pricing, costs, suppliers and how the business will reach people. Tracking cash flow is essential because a business can appear profitable on paper while still lacking money to pay bills on time. Clear records support better decisions."),
+            StorySection("Build trust over time", "Reliable quality, honest communication, fair treatment and responsive service help create lasting customer relationships. Businesses should follow applicable laws, protect customer information and review performance regularly. Sustainable growth comes from learning and improving, not simply increasing sales as quickly as possible.")
+        )),
+        Story("HEALTH", "Understanding the science of good sleep", "Learn why sleep matters for learning, focus and everyday wellbeing.", "4 min read", listOf(
+            StorySection("Why sleep matters", "Sleep is an active biological process. It supports memory, attention, emotional regulation and many functions involved in physical health. Sleep needs vary with age and individual circumstances, and regularly getting too little sleep can make everyday learning and concentration more difficult."),
+            StorySection("The body clock", "The body's circadian rhythm helps coordinate periods of alertness and sleep across roughly a day. Light exposure, daily routines and timing of activities can influence this rhythm. A consistent sleep and wake schedule can help the body maintain a predictable pattern."),
+            StorySection("Supportive habits", "A calm, comfortable sleep environment and a regular wind-down routine can make rest easier. Limiting bright screens close to bedtime may help some people, especially when device use delays sleep. Persistent sleep difficulties are worth discussing with a trusted adult or qualified health professional.")
+        )),
+        Story("NEWS", "How to read the news with a critical mind", "Learn to check sources, compare reports and separate verified information from opinion.", "4 min read", listOf(
+            StorySection("Check the source", "Look at who published a report, who wrote it and when it appeared. A clear author, date and link to original evidence make a story easier to evaluate. Be cautious when a post gives no source, uses an unfamiliar account or makes a dramatic claim without supporting information."),
+            StorySection("Separate evidence from interpretation", "News reports may include confirmed facts, expert explanations, estimates and opinions. These are not interchangeable. Read beyond the headline, check whether numbers have context and see whether a quote represents the original speaker accurately."),
+            StorySection("Compare and verify", "For important or surprising claims, compare coverage from multiple credible outlets and look for primary documents or statements. Images and videos can be old or taken out of context. Pausing before sharing gives time to verify details and reduces the spread of misinformation.")
+        ))
     )
 
     MaterialTheme(
@@ -659,10 +706,11 @@ private fun ArticleReaderScreen(
     onBack: () -> Unit,
     onSave: () -> Unit
 ) {
-    val sections = remember(story.title, story.summary) {
-        story.summary.split(Regex("\\n\\s*\\n"))
-            .map { it.trim() }.filter { it.isNotBlank() }
-            .ifEmpty { listOf(story.summary.trim().ifBlank { "No reading content is available yet." }) }
+    val sections = remember(story.title, story.summary, story.sections) {
+        if (story.sections.isNotEmpty()) story.sections
+        else story.summary.split(Regex("\\n\\s*\\n"))
+            .mapIndexedNotNull { index, text -> text.trim().takeIf { it.isNotBlank() }?.let { StorySection("Section ${index + 1}", it) } }
+            .ifEmpty { listOf(StorySection("Reading content", story.summary.trim().ifBlank { "No reading content is available yet." })) }
     }
     val lastContentIndex = sections.size
     val totalItems = sections.size + 2
@@ -715,7 +763,7 @@ private fun ArticleReaderScreen(
                     DropdownMenuItem(text = { Text("Article overview") }, onClick = { showSectionMenu = false; readerScope.launch { readerListState.animateScrollToItem(0) } })
                     sections.forEachIndexed { index, paragraph ->
                         DropdownMenuItem(
-                            text = { Text("Section ${index + 1}: " + paragraph.take(34).replace("\\n", " ") + if (paragraph.length > 34) "…" else "") },
+                            text = { Text("Section ${index + 1}: " + paragraph.title) },
                             onClick = { showSectionMenu = false; readerScope.launch { readerListState.animateScrollToItem(index + 1) } }
                         )
                     }
@@ -740,8 +788,10 @@ private fun ArticleReaderScreen(
             items(sections.size) { index ->
                 Column {
                     Text("SECTION ${index + 1}", color = Blue, fontSize = 10.sp, fontWeight = FontWeight.Bold, letterSpacing = 1.1.sp)
+                    Spacer(Modifier.height(5.dp))
+                    Text(sections[index].title, color = foreground, fontSize = (fontSize + 2).sp, fontWeight = FontWeight.Bold, lineHeight = (fontSize * 1.45f).sp)
                     Spacer(Modifier.height(8.dp))
-                    Text(sections[index], color = bodyColor, fontSize = fontSize.sp, lineHeight = (fontSize * 1.7f).sp)
+                    Text(sections[index].body, color = bodyColor, fontSize = fontSize.sp, lineHeight = (fontSize * 1.7f).sp)
                 }
             }
             item {
