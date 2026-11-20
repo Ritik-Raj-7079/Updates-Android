@@ -682,6 +682,12 @@ private fun ArticleReaderScreen(
             Text("${fontSize.toInt()} sp", color = bodyColor, fontSize = 12.sp)
             IconButton(onClick = { if (fontSize < 26f) fontSize += 1f }, modifier = Modifier.size(36.dp)) { Icon(Icons.Filled.Add, "Increase text", tint = Blue) }
         }
+        val readerProgress = ((readerListState.firstVisibleItemIndex + 1) / 3f).coerceIn(0f, 1f)
+        Row(Modifier.fillMaxWidth().padding(horizontal = 20.dp), verticalAlignment = Alignment.CenterVertically) {
+            LinearProgressIndicator(progress = { readerProgress }, modifier = Modifier.weight(1f).height(5.dp), color = Blue, trackColor = if (readingTheme == 1) Color.DarkGray else Color(0xFFDCE3EF))
+            Spacer(Modifier.width(10.dp))
+            Text("${(readerProgress * 100).toInt()}%", color = bodyColor, fontSize = 11.sp, fontWeight = FontWeight.SemiBold)
+        }
         LazyColumn(state = readerListState, modifier = Modifier.fillMaxSize(), contentPadding = PaddingValues(horizontal = 24.dp, vertical = 18.dp), verticalArrangement = Arrangement.spacedBy(16.dp)) {
             item {
                 Text(story.category, color = Blue, fontSize = 11.sp, fontWeight = FontWeight.Bold, letterSpacing = 1.2.sp)
