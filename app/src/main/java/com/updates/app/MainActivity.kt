@@ -558,7 +558,7 @@ private fun MainDashboard(
     ) { padding ->
         Column(Modifier.fillMaxSize().padding(padding)) {
             when (selectedTab) {
-                "Home" -> HomeScreen(stories, query, onQueryChange, saved, onSave, selectedTopics, selectedFeedCategory, onFeedCategoryChange, onOpenStory, { onTabSelected("Profile") }, { onTabSelected("News") }, { onTabSelected("Research") })
+                "Home" -> HomeScreen(stories, query, onQueryChange, saved, onSave, selectedTopics, readingHistory, selectedFeedCategory, onFeedCategoryChange, onOpenStory, { onTabSelected("Profile") }, { onTabSelected("News") }, { onTabSelected("Research") })
                 "Explore" -> KnowledgeExploreScreen(onExploreCategory)
                 "News" -> NewsScreen()
                 "Research" -> ResearchScreen()
@@ -573,12 +573,35 @@ private fun MainDashboard(
 @Composable
 private fun HomeScreen(
     stories: List<Story>, query: String, onQuery: (String) -> Unit,
-    saved: Set<String>, onSave: (String) -> Unit, selectedTopics: Set<String>,
+    saved: Set<String>, onSave: (String) -> Unit, selectedTopics: Set<String>, readingHistory: List<String>,
     selectedFeedCategory: String, onFeedCategoryChange: (String) -> Unit,
     onOpenStory: (Story) -> Unit, onProfileClick: () -> Unit,
     onNewsClick: () -> Unit, onResearchClick: () -> Unit
 ) {
     val filtered = stories.filter { query.isBlank() || it.title.contains(query,true) || it.category.contains(query,true) || it.summary.contains(query,true) }
+    val personalized = stories
+        .filter { it.title !in readingHistory }
+        .sortedByDescending { story ->
+            val topicMatch = selectedTopics.any { topic ->
+                story.category.equals(topic, ignoreCase = true) ||
+                    story.title.contains(topic, ignoreCase = true) ||
+                    story.summary.contains(topic, ignoreCase = true)
+            }
+            val savedMatch = saved.any { savedTitle ->
+                stories.firstOrNull { it.title == savedTitle }?.category.equals(story.category, ignoreCase = true)
+            }
+            (if (topicMatch) 3 else 0) + (if (savedMatch) 1 else 0)
+        }
+        .filter { story ->
+            selectedTopics.isEmpty() || selectedTopics.any { topic ->
+                story.category.equals(topic, ignoreCase = true) ||
+                    story.title.contains(topic, ignoreCase = true) ||
+                    story.summary.contains(topic, ignoreCase = true)
+            } || saved.any { savedTitle ->
+                stories.firstOrNull { it.title == savedTitle }?.category.equals(story.category, ignoreCase = true)
+            }
+        }
+        .take(6)
     LazyColumn(Modifier.fillMaxSize(), contentPadding = PaddingValues(16.dp), verticalArrangement = Arrangement.spacedBy(16.dp)) {
         item {
             Row(verticalAlignment = Alignment.CenterVertically) {
@@ -597,6 +620,32 @@ private fun HomeScreen(
                             Text(story.title,color=Color(0xFF263238),fontFamily=androidx.compose.ui.text.font.FontFamily.Serif,fontSize=22.sp,fontWeight=FontWeight.Bold,lineHeight=27.sp,maxLines=3)
                         }
                         Button(onClick={onOpenStory(story)},colors=ButtonDefaults.buttonColors(containerColor=Orange),shape=RoundedCornerShape(12.dp)) { Text("Read Now") }
+                    }
+                }
+            }
+        }
+        if (personalized.isNotEmpty()) {
+            item {
+                SectionTitle("Picked for You", if (selectedTopics.isEmpty()) "Fresh ideas to continue your discovery" else "Based on your selected interests")
+                LazyRow(horizontalArrangement = Arrangement.spacedBy(11.dp)) {
+                    items(personalized) { story ->
+                        Column(
+                            Modifier.width(205.dp).height(175.dp)
+                                .background(Color(0xFFF3E8E1), RoundedCornerShape(17.dp))
+                                .clickable { onOpenStory(story) }.padding(14.dp),
+                            verticalArrangement = Arrangement.SpaceBetween
+                        ) {
+                            Column {
+                                Text(story.category, color = Orange, fontSize = 10.sp, fontWeight = FontWeight.Bold, letterSpacing = .7.sp)
+                                Spacer(Modifier.height(7.dp))
+                                Text(story.title, color = Navy, fontFamily = androidx.compose.ui.text.font.FontFamily.Serif, fontSize = 17.sp, fontWeight = FontWeight.Bold, lineHeight = 21.sp, maxLines = 3)
+                            }
+                            Row(verticalAlignment = Alignment.CenterVertically) {
+                                Text(story.readTime, color = Color.DarkGray, fontSize = 10.sp)
+                                Spacer(Modifier.weight(1f))
+                                Text("Read  →", color = Orange, fontSize = 11.sp, fontWeight = FontWeight.Bold)
+                            }
+                        }
                     }
                 }
             }
