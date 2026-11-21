@@ -622,6 +622,7 @@ private fun HomeScreen(
     }
 }
 
+@Composable
 private fun SectionTitle(title: String, subtitle: String) {
     Column {
         Text(title, color = Navy, fontFamily = androidx.compose.ui.text.font.FontFamily.Serif, fontSize = 21.sp, fontWeight = FontWeight.Bold)
