@@ -558,7 +558,7 @@ private fun MainDashboard(
     ) { padding ->
         Column(Modifier.fillMaxSize().padding(padding)) {
             when (selectedTab) {
-                "Home" -> HomeScreen(stories, query, onQueryChange, saved, onSave, selectedTopics, selectedFeedCategory, onFeedCategoryChange, onOpenStory, { onTabSelected("Profile") })
+                "Home" -> HomeScreen(stories, query, onQueryChange, saved, onSave, selectedTopics, selectedFeedCategory, onFeedCategoryChange, onOpenStory, { onTabSelected("Profile") }, { onTabSelected("News") }, { onTabSelected("Research") })
                 "Explore" -> KnowledgeExploreScreen(onExploreCategory)
                 "News" -> NewsScreen()
                 "Research" -> ResearchScreen()
@@ -575,7 +575,8 @@ private fun HomeScreen(
     stories: List<Story>, query: String, onQuery: (String) -> Unit,
     saved: Set<String>, onSave: (String) -> Unit, selectedTopics: Set<String>,
     selectedFeedCategory: String, onFeedCategoryChange: (String) -> Unit,
-    onOpenStory: (Story) -> Unit, onProfileClick: () -> Unit
+    onOpenStory: (Story) -> Unit, onProfileClick: () -> Unit,
+    onNewsClick: () -> Unit, onResearchClick: () -> Unit
 ) {
     val filtered = stories.filter { query.isBlank() || it.title.contains(query,true) || it.category.contains(query,true) || it.summary.contains(query,true) }
     LazyColumn(Modifier.fillMaxSize(), contentPadding = PaddingValues(16.dp), verticalArrangement = Arrangement.spacedBy(16.dp)) {
@@ -615,17 +616,45 @@ private fun HomeScreen(
             }
         }
         item {
-            SectionTitle("Global Tech News","Stay curious about what's happening")
-            Row(horizontalArrangement=Arrangement.spacedBy(8.dp)) {
-                SuggestionChip(onClick={},label={Text("Technology")})
-                SuggestionChip(onClick={},label={Text("News")})
+            Column(
+                Modifier.fillMaxWidth()
+                    .background(Color(0xFFE8EEE7), RoundedCornerShape(18.dp))
+                    .clickable(onClick = onNewsClick)
+                    .padding(16.dp)
+            ) {
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    Icon(Icons.Filled.Public, contentDescription = null, tint = Color(0xFF536F60))
+                    Spacer(Modifier.width(8.dp))
+                    Text("GLOBAL TECH NEWS", color = Color(0xFF536F60), fontSize = 10.sp, fontWeight = FontWeight.Bold, letterSpacing = 1.sp)
+                    Spacer(Modifier.weight(1f))
+                    Icon(Icons.Filled.ArrowForward, contentDescription = "Open news", tint = Color(0xFF536F60))
+                }
+                Spacer(Modifier.height(7.dp))
+                Text("Stay curious about what's happening", color = Navy, fontFamily = androidx.compose.ui.text.font.FontFamily.Serif, fontSize = 19.sp, fontWeight = FontWeight.Bold)
+                Text("Read current headlines across technology, science, India and the world.", color = Color.DarkGray, fontSize = 12.sp, lineHeight = 18.sp)
+                Spacer(Modifier.height(10.dp))
+                Text("Explore latest news  →", color = Color(0xFF536F60), fontSize = 12.sp, fontWeight = FontWeight.Bold)
             }
         }
         item {
-            SectionTitle("Research & Discovery","Ideas, papers and new perspectives")
-            Row(horizontalArrangement=Arrangement.spacedBy(8.dp)) {
-                SuggestionChip(onClick={},label={Text("Explore research")})
-                SuggestionChip(onClick={},label={Text("Discover authors")})
+            Column(
+                Modifier.fillMaxWidth()
+                    .background(Color(0xFFF3E8E1), RoundedCornerShape(18.dp))
+                    .clickable(onClick = onResearchClick)
+                    .padding(16.dp)
+            ) {
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    Icon(Icons.Filled.Science, contentDescription = null, tint = Orange)
+                    Spacer(Modifier.width(8.dp))
+                    Text("RESEARCH & DISCOVERY", color = Orange, fontSize = 10.sp, fontWeight = FontWeight.Bold, letterSpacing = 1.sp)
+                    Spacer(Modifier.weight(1f))
+                    Icon(Icons.Filled.ArrowForward, contentDescription = "Open research", tint = Orange)
+                }
+                Spacer(Modifier.height(7.dp))
+                Text("Ideas, papers and new perspectives", color = Navy, fontFamily = androidx.compose.ui.text.font.FontFamily.Serif, fontSize = 19.sp, fontWeight = FontWeight.Bold)
+                Text("Search scholarly works, explore authors and discover new research from around the world.", color = Color.DarkGray, fontSize = 12.sp, lineHeight = 18.sp)
+                Spacer(Modifier.height(10.dp))
+                Text("Explore research papers  →", color = Orange, fontSize = 12.sp, fontWeight = FontWeight.Bold)
             }
         }
         item { Text("Curiosity has no finish line.",color=Color(0xFF718B7C),fontWeight=FontWeight.SemiBold,fontSize=12.sp) }
