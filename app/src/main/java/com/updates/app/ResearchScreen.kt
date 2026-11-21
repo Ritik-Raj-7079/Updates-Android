@@ -28,7 +28,7 @@ import java.net.HttpURLConnection
 import java.net.URL
 import java.net.URLEncoder
 
-private data class ResearchWork(
+internal data class ResearchWork(
     val id: String,
     val title: String,
     val year: String,
@@ -122,7 +122,7 @@ fun ResearchScreen() {
     }
 }
 
-private fun searchOpenAlex(search: String): List<ResearchWork> {
+internal fun searchOpenAlex(search: String): List<ResearchWork> {
     val encoded = URLEncoder.encode(search, "UTF-8")
     val url = URL("https://api.openalex.org/works?search=" + encoded + "&per-page=20&select=id,display_name,publication_year,authorships,doi")
     val connection = (url.openConnection() as HttpURLConnection).apply {
@@ -158,5 +158,29 @@ private fun searchOpenAlex(search: String): List<ResearchWork> {
         }
     } finally {
         connection.disconnect()
+    }
+}
+
+@Composable
+fun HomeResearchPreview(onOpenResearch: () -> Unit) {
+    var works by remember { mutableStateOf<List<ResearchWork>>(emptyList()) }
+    var loading by remember { mutableStateOf(true) }
+    var failed by remember { mutableStateOf(false) }
+    LaunchedEffect(Unit) {
+        try { works = withContext(Dispatchers.IO) { searchOpenAlex("artificial intelligence") }.take(3); failed = works.isEmpty() }
+        catch (_: Exception) { failed = true } finally { loading = false }
+    }
+    Column(verticalArrangement = Arrangement.spacedBy(9.dp)) {
+        when {
+            loading -> LinearProgressIndicator(Modifier.fillMaxWidth(), color = Color(0xFFC8795D), trackColor = Color(0xFFEEDBD2))
+            failed -> Text("Research preview is temporarily unavailable. Open Research to search again.", color = Color.Gray, fontSize = 11.sp)
+            else -> works.forEach { work ->
+                Column(Modifier.fillMaxWidth().background(Color(0xFFFFFEFA), RoundedCornerShape(13.dp)).clickable(onClick = onOpenResearch).padding(12.dp)) {
+                    Text(work.title, color = Color(0xFF263238), fontSize = 13.sp, fontWeight = FontWeight.SemiBold, lineHeight = 18.sp, maxLines = 2)
+                    Spacer(Modifier.height(4.dp))
+                    Text(work.year.ifBlank { "Year unavailable" } + "  •  " + work.authors, color = Color(0xFFC8795D), fontSize = 10.sp, maxLines = 2)
+                }
+            }
+        }
     }
 }
