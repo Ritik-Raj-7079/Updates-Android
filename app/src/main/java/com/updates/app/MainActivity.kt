@@ -567,103 +567,61 @@ private fun HomeScreen(
     selectedFeedCategory: String, onFeedCategoryChange: (String) -> Unit,
     onOpenStory: (Story) -> Unit, onProfileClick: () -> Unit
 ) {
-    val feedCategories = listOf("For You", "News", "Research", "Stories") + Topics
-    val filtered = stories.filter {
-        val matchesSearch = query.isBlank() || it.title.contains(query, true) || it.category.contains(query, true) || it.summary.contains(query, true)
-        val matchesInterest = selectedFeedCategory != "For You" || selectedTopics.isEmpty() || it.category.lowercase() in selectedTopics.map { t -> t.lowercase() }
-        val matchesFeed = when (selectedFeedCategory) {
-            "For You" -> true
-            "Stories" -> it.category == "HISTORY" || it.category == "LITERATURE"
-            else -> it.category.equals(selectedFeedCategory, true)
-        }
-        matchesSearch && matchesInterest && matchesFeed
-    }
-    LazyColumn(
-        modifier = Modifier.fillMaxSize(),
-        contentPadding = PaddingValues(horizontal = 18.dp, vertical = 14.dp),
-        verticalArrangement = Arrangement.spacedBy(15.dp)
-    ) {
+    val filtered = stories.filter { query.isBlank() || it.title.contains(query,true) || it.category.contains(query,true) || it.summary.contains(query,true) }
+    LazyColumn(Modifier.fillMaxSize(), contentPadding = PaddingValues(16.dp), verticalArrangement = Arrangement.spacedBy(16.dp)) {
         item {
             Row(verticalAlignment = Alignment.CenterVertically) {
-                BrandMark(40); Spacer(Modifier.width(10.dp))
-                Column(Modifier.weight(1f)) {
-                    Text("Updates", color = Navy, fontFamily = androidx.compose.ui.text.font.FontFamily.Serif, fontWeight = FontWeight.Bold, fontSize = 25.sp)
-                    Text("Build Your Own Treasure of Knowledge", color = Color(0xFF68756D), fontSize = 10.sp)
-                }
-                IconButton(onClick = onProfileClick) { Icon(Icons.Filled.AccountCircle, contentDescription = "Profile", tint = Navy) }
+                OutlinedTextField(value=query,onValueChange=onQuery,modifier=Modifier.weight(1f),placeholder={Text("Search stories")},leadingIcon={Icon(Icons.Filled.Search,null)},singleLine=true,shape=RoundedCornerShape(18.dp))
+                IconButton(onClick=onProfileClick) { Icon(Icons.Filled.NotificationsNone,contentDescription="Notifications",tint=Navy) }
             }
         }
         item {
-            Column(Modifier.fillMaxWidth().background(Color(0xFF8FA99A), RoundedCornerShape(24.dp)).padding(21.dp)) {
-                Text("THE KNOWLEDGE JOURNEY", color = Color(0xFF263238), fontSize = 10.sp, fontWeight = FontWeight.Bold, letterSpacing = 1.4.sp)
-                Spacer(Modifier.height(8.dp))
-                Text("Ideas worth reading.\nKnowledge worth keeping.", color = Color.White, fontSize = 26.sp, fontWeight = FontWeight.ExtraBold, lineHeight = 32.sp)
-                Spacer(Modifier.height(9.dp))
-                Text("Discover new perspectives, one story at a time.", color = Color(0xFF34443D), fontSize = 13.sp)
-                Spacer(Modifier.height(15.dp))
-                Row(verticalAlignment = Alignment.CenterVertically) {
-                    Icon(Icons.Filled.AutoStories, null, tint = Orange, modifier = Modifier.size(18.dp))
-                    Spacer(Modifier.width(7.dp))
-                    Text("Read · Explore · Save · Learn", color = Color(0xFF263238), fontSize = 11.sp, fontWeight = FontWeight.SemiBold)
-                }
-            }
-        }
-        item {
-            OutlinedTextField(
-                value = query, onValueChange = onQuery, modifier = Modifier.fillMaxWidth(),
-                placeholder = { Text("Search ideas, topics and stories") },
-                leadingIcon = { Icon(Icons.Filled.Search, null) }, singleLine = true,
-                shape = RoundedCornerShape(16.dp),
-                colors = OutlinedTextFieldDefaults.colors(unfocusedContainerColor = Color.White, focusedContainerColor = Color.White)
-            )
-        }
-        item {
-            LazyRow(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                items(feedCategories) { category ->
-                    FilterChip(selected = selectedFeedCategory == category, onClick = { onFeedCategoryChange(category) }, label = { Text(category) })
-                }
-            }
-        }
-        item {
-            SectionTitle(if (selectedFeedCategory == "For You") "Editor's picks" else selectedFeedCategory,
-                if (selectedTopics.isEmpty()) "Handpicked ideas for curious minds" else "Your interests · " + selectedTopics.take(3).joinToString(" · "))
-        }
-        if (filtered.isNotEmpty()) {
-            item {
-                val featured = filtered.first()
-                Column(Modifier.fillMaxWidth().background(Color.White, RoundedCornerShape(22.dp)).clickable { onOpenStory(featured) }) {
-                    Box(Modifier.fillMaxWidth().height(132.dp).background(Color(0xFFB9C8BA), RoundedCornerShape(topStart = 22.dp, topEnd = 22.dp)), contentAlignment = Alignment.Center) {
-                        Column(horizontalAlignment = Alignment.CenterHorizontally) {
-                            Icon(Icons.Filled.AutoStories, null, tint = Color(0xFF263238), modifier = Modifier.size(40.dp))
-                            Spacer(Modifier.height(5.dp))
-                            Text("FEATURED READING", color = Color(0xFF263238), fontSize = 10.sp, fontWeight = FontWeight.Bold, letterSpacing = 1.5.sp)
+            Text("Featured",color=Navy,fontFamily=androidx.compose.ui.text.font.FontFamily.Serif,fontSize=24.sp,fontWeight=FontWeight.Bold)
+            LazyRow(horizontalArrangement=Arrangement.spacedBy(12.dp)) {
+                items(filtered.take(4)) { story ->
+                    Column(Modifier.width(290.dp).height(210.dp).background(Color(0xFF8FA99A),RoundedCornerShape(22.dp)).clickable{onOpenStory(story)}.padding(18.dp),verticalArrangement=Arrangement.SpaceBetween) {
+                        Column {
+                            Text(story.category.uppercase(),color=Color(0xFF263238),fontSize=11.sp,fontWeight=FontWeight.Bold)
+                            Spacer(Modifier.height(8.dp))
+                            Text(story.title,color=Color(0xFF263238),fontFamily=androidx.compose.ui.text.font.FontFamily.Serif,fontSize=22.sp,fontWeight=FontWeight.Bold,lineHeight=27.sp,maxLines=3)
                         }
+                        Button(onClick={onOpenStory(story)},colors=ButtonDefaults.buttonColors(containerColor=Orange),shape=RoundedCornerShape(12.dp)) { Text("Read Now") }
                     }
-                    Column(Modifier.padding(16.dp)) {
-                        Text(featured.category, color = Blue, fontSize = 10.sp, fontWeight = FontWeight.Bold, letterSpacing = 1.sp)
-                        Spacer(Modifier.height(6.dp))
-                        Text(featured.title, color = Navy, fontFamily = androidx.compose.ui.text.font.FontFamily.Serif, fontSize = 22.sp, lineHeight = 27.sp, fontWeight = FontWeight.Bold)
-                        Spacer(Modifier.height(6.dp))
-                        Text(featured.summary, color = Color.DarkGray, fontSize = 13.sp, lineHeight = 19.sp, maxLines = 3)
-                        Spacer(Modifier.height(12.dp))
-                        Row(verticalAlignment = Alignment.CenterVertically) {
-                            Text(featured.readTime, color = Color.Gray, fontSize = 11.sp)
-                            Spacer(Modifier.weight(1f))
-                            Text("Start reading →", color = Blue, fontWeight = FontWeight.Bold, fontSize = 12.sp)
+                }
+            }
+        }
+        item {
+            SectionTitle("Trending Stories","Popular reads for curious minds")
+            LazyRow(horizontalArrangement=Arrangement.spacedBy(12.dp)) {
+                items(filtered.take(8)) { story ->
+                    Column(Modifier.width(185.dp).height(215.dp).background(Color(0xFFE2E8DD),RoundedCornerShape(18.dp)).clickable{onOpenStory(story)}.padding(13.dp),verticalArrangement=Arrangement.SpaceBetween) {
+                        Box(Modifier.fillMaxWidth().height(80.dp).background(Color(0xFFB9C8BA),RoundedCornerShape(12.dp)),contentAlignment=Alignment.Center) { Icon(Icons.Filled.AutoStories,null,tint=Color(0xFF536F60),modifier=Modifier.size(30.dp)) }
+                        Column {
+                            Text(story.category,color=Color(0xFF718B7C),fontSize=10.sp,fontWeight=FontWeight.Bold)
+                            Text(story.title,color=Navy,fontFamily=androidx.compose.ui.text.font.FontFamily.Serif,fontSize=18.sp,lineHeight=21.sp,maxLines=3)
                         }
                     }
                 }
             }
-            items(filtered.drop(1)) { story ->
-                StoryCard(story, story.title in saved, onSave = { onSave(story.title) }, onOpen = { onOpenStory(story) })
-            }
-        } else {
-            item { Text("No matching reads yet. Try a different category or search.", color = Color.Gray) }
         }
-        item { Text("Curiosity has no finish line.", color = Blue, fontSize = 12.sp, fontWeight = FontWeight.SemiBold, modifier = Modifier.padding(vertical = 8.dp)) }
+        item {
+            SectionTitle("Global Tech News","Stay curious about what's happening")
+            Row(horizontalArrangement=Arrangement.spacedBy(8.dp)) {
+                SuggestionChip(onClick={},label={Text("Technology")})
+                SuggestionChip(onClick={},label={Text("News")})
+            }
+        }
+        item {
+            SectionTitle("Research & Discovery","Ideas, papers and new perspectives")
+            Row(horizontalArrangement=Arrangement.spacedBy(8.dp)) {
+                SuggestionChip(onClick={},label={Text("Explore research")})
+                SuggestionChip(onClick={},label={Text("Discover authors")})
+            }
+        }
+        item { Text("Curiosity has no finish line.",color=Color(0xFF718B7C),fontWeight=FontWeight.SemiBold,fontSize=12.sp) }
     }
 }
-@Composable
+
 private fun SectionTitle(title: String, subtitle: String) {
     Column {
         Text(title, color = Navy, fontFamily = androidx.compose.ui.text.font.FontFamily.Serif, fontSize = 21.sp, fontWeight = FontWeight.Bold)
