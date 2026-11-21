@@ -580,6 +580,23 @@ private fun HomeScreen(
     onOpenStory: (Story) -> Unit, onProfileClick: () -> Unit,
     onNewsClick: () -> Unit, onResearchClick: () -> Unit
 ) {
+    val context = androidx.compose.ui.platform.LocalContext.current
+    val goalPrefs = remember { context.getSharedPreferences("updates_preferences", android.content.Context.MODE_PRIVATE) }
+    val todayKey = remember { java.text.SimpleDateFormat("yyyy-MM-dd", java.util.Locale.US).format(java.util.Date()) }
+    var dailyGoal by remember { mutableIntStateOf(goalPrefs.getInt("daily_reading_goal", 3).coerceIn(1, 10)) }
+    var dailyOpened by remember {
+        val storedDate = goalPrefs.getString("daily_open_date", "") ?: ""
+        mutableIntStateOf(if (storedDate == todayKey) goalPrefs.getInt("daily_open_count", 0) else 0)
+    }
+    val trackOpen: (Story) -> Unit = { story ->
+        if ((goalPrefs.getString("daily_open_date", "") ?: "") != todayKey) {
+            dailyOpened = 0
+            goalPrefs.edit().putString("daily_open_date", todayKey).putInt("daily_open_count", 0).apply()
+        }
+        dailyOpened += 1
+        goalPrefs.edit().putInt("daily_open_count", dailyOpened).apply()
+        onOpenStory(story)
+    }
     val filtered = stories.filter { query.isBlank() || it.title.contains(query,true) || it.category.contains(query,true) || it.summary.contains(query,true) }
     val personalized = stories
         .filter { it.title !in readingHistory }
@@ -625,6 +642,25 @@ private fun HomeScreen(
             }
         }
         item {
+            Column(Modifier.fillMaxWidth().background(Color.White, RoundedCornerShape(18.dp)).padding(16.dp)) {
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    Column(Modifier.weight(1f)) {
+                        Text("DAILY READING GOAL", color = Color(0xFF536F60), fontSize = 10.sp, fontWeight = FontWeight.Bold, letterSpacing = 1.sp)
+                        Text("$dailyOpened of $dailyGoal stories opened today", color = Navy, fontFamily = androidx.compose.ui.text.font.FontFamily.Serif, fontSize = 18.sp, fontWeight = FontWeight.Bold)
+                    }
+                    Row(verticalAlignment = Alignment.CenterVertically) {
+                        IconButton(onClick = { dailyGoal = (dailyGoal - 1).coerceAtLeast(1); goalPrefs.edit().putInt("daily_reading_goal", dailyGoal).apply() }, modifier = Modifier.size(34.dp)) { Icon(Icons.Filled.Remove, "Decrease daily goal", tint = Blue) }
+                        Text("$dailyGoal", color = Navy, fontWeight = FontWeight.Bold)
+                        IconButton(onClick = { dailyGoal = (dailyGoal + 1).coerceAtMost(10); goalPrefs.edit().putInt("daily_reading_goal", dailyGoal).apply() }, modifier = Modifier.size(34.dp)) { Icon(Icons.Filled.Add, "Increase daily goal", tint = Blue) }
+                    }
+                }
+                Spacer(Modifier.height(8.dp))
+                LinearProgressIndicator(progress = { (dailyOpened.toFloat() / dailyGoal).coerceIn(0f, 1f) }, modifier = Modifier.fillMaxWidth().height(7.dp), color = Blue, trackColor = Color(0xFFE5EBE2))
+                Spacer(Modifier.height(5.dp))
+                Text(if (dailyOpened >= dailyGoal) "Daily goal reached — great progress!" else "Open " + (dailyGoal - dailyOpened) + " more stories to reach the daily goal.", color = Color.Gray, fontSize = 11.sp)
+            }
+        }
+        item {
             Row(verticalAlignment = Alignment.CenterVertically) {
                 OutlinedTextField(value=query,onValueChange=onQuery,modifier=Modifier.weight(1f),placeholder={Text("Search stories")},leadingIcon={Icon(Icons.Filled.Search,null)},singleLine=true,shape=RoundedCornerShape(18.dp))
                 IconButton(onClick=onProfileClick) { Icon(Icons.Filled.NotificationsNone,contentDescription="Notifications",tint=Navy) }
@@ -634,13 +670,13 @@ private fun HomeScreen(
             Text("Featured",color=Navy,fontFamily=androidx.compose.ui.text.font.FontFamily.Serif,fontSize=24.sp,fontWeight=FontWeight.Bold)
             LazyRow(horizontalArrangement=Arrangement.spacedBy(12.dp)) {
                 items(filtered.take(4)) { story ->
-                    Column(Modifier.width(290.dp).height(210.dp).background(Color(0xFF8FA99A),RoundedCornerShape(22.dp)).clickable{onOpenStory(story)}.padding(18.dp),verticalArrangement=Arrangement.SpaceBetween) {
+                    Column(Modifier.width(290.dp).height(210.dp).background(Color(0xFF8FA99A),RoundedCornerShape(22.dp)).clickable{trackOpen(story)}.padding(18.dp),verticalArrangement=Arrangement.SpaceBetween) {
                         Column {
                             Text(story.category.uppercase(),color=Color(0xFF263238),fontSize=11.sp,fontWeight=FontWeight.Bold)
                             Spacer(Modifier.height(8.dp))
                             Text(story.title,color=Color(0xFF263238),fontFamily=androidx.compose.ui.text.font.FontFamily.Serif,fontSize=22.sp,fontWeight=FontWeight.Bold,lineHeight=27.sp,maxLines=3)
                         }
-                        Button(onClick={onOpenStory(story)},colors=ButtonDefaults.buttonColors(containerColor=Orange),shape=RoundedCornerShape(12.dp)) { Text("Read Now") }
+                        Button(onClick={trackOpen(story)},colors=ButtonDefaults.buttonColors(containerColor=Orange),shape=RoundedCornerShape(12.dp)) { Text("Read Now") }
                     }
                 }
             }
@@ -653,7 +689,7 @@ private fun HomeScreen(
                         Column(
                             Modifier.width(205.dp).height(175.dp)
                                 .background(Color(0xFFF3E8E1), RoundedCornerShape(17.dp))
-                                .clickable { onOpenStory(story) }.padding(14.dp),
+                                .clickable { trackOpen(story) }.padding(14.dp),
                             verticalArrangement = Arrangement.SpaceBetween
                         ) {
                             Column {
@@ -675,7 +711,7 @@ private fun HomeScreen(
             SectionTitle("Trending Stories","Popular reads for curious minds")
             LazyRow(horizontalArrangement=Arrangement.spacedBy(12.dp)) {
                 items(filtered.take(8)) { story ->
-                    Column(Modifier.width(185.dp).height(215.dp).background(Color(0xFFE2E8DD),RoundedCornerShape(18.dp)).clickable{onOpenStory(story)}.padding(13.dp),verticalArrangement=Arrangement.SpaceBetween) {
+                    Column(Modifier.width(185.dp).height(215.dp).background(Color(0xFFE2E8DD),RoundedCornerShape(18.dp)).clickable{trackOpen(story)}.padding(13.dp),verticalArrangement=Arrangement.SpaceBetween) {
                         Box(Modifier.fillMaxWidth().height(80.dp).background(Color(0xFFB9C8BA),RoundedCornerShape(12.dp)),contentAlignment=Alignment.Center) { Icon(Icons.Filled.AutoStories,null,tint=Color(0xFF536F60),modifier=Modifier.size(30.dp)) }
                         Column {
                             Text(story.category,color=Color(0xFF718B7C),fontSize=10.sp,fontWeight=FontWeight.Bold)
