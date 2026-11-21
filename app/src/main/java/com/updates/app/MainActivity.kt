@@ -537,12 +537,13 @@ private fun MainDashboard(
         containerColor = Page,
         bottomBar = {
             NavigationBar(containerColor = Color.White) {
-                listOf("Home", "Explore", "News", "Research", "Library", "Profile").forEach { tab ->
+                listOf("Home", "Explore", "News", "Research", "Stats", "Library", "Profile").forEach { tab ->
                     val icon = when (tab) {
                         "Home" -> Icons.Filled.Home
                         "Explore" -> Icons.Filled.Explore
                         "News" -> Icons.Filled.Article
                         "Research" -> Icons.Filled.Science
+                        "Stats" -> Icons.Filled.Insights
                         "Library" -> Icons.Filled.Bookmarks
                         "Profile" -> Icons.Filled.Person
                         else -> Icons.Filled.Edit
@@ -564,6 +565,7 @@ private fun MainDashboard(
                 "Explore" -> KnowledgeExploreScreen(onExploreCategory)
                 "News" -> NewsScreen()
                 "Research" -> ResearchScreen()
+                "Stats" -> ReadingStatisticsScreen(stories, readingHistory, storyProgress, saved)
                 "Library" -> PersonalLibraryScreen(stories, saved, readingHistory, onSave, onClearHistory, onOpenStory, savedBooks, onSaveBook)
                 "Profile" -> UserProfileScreen(displayName, profileBio, communityArticles.count { it.authorUid == currentUserId }, cloudProfileMessage, onProfileSave, { onTabSelected("Write") }, onSignOut)
                 else -> ArticlePublishingScreen(communityArticles, displayName, onPublishArticle, onDeleteArticle, currentUserId, cloudArticleMessage)
@@ -572,6 +574,89 @@ private fun MainDashboard(
     }
 }
 
+@Composable
+private fun ReadingStatisticsScreen(
+    stories: List<Story>, readingHistory: List<String>, storyProgress: Map<String, Int>, saved: Set<String>
+) {
+    val context = androidx.compose.ui.platform.LocalContext.current
+    val prefs = remember { context.getSharedPreferences("updates_preferences", android.content.Context.MODE_PRIVATE) }
+    val activeDates = remember { prefs.getStringSet("reading_active_dates", emptySet())?.toSet() ?: emptySet() }
+    fun dateKey(daysAgo: Int): String = java.text.SimpleDateFormat("yyyy-MM-dd", java.util.Locale.US).format(
+        java.util.Calendar.getInstance().apply { add(java.util.Calendar.DAY_OF_YEAR, -daysAgo) }.time
+    )
+    val week = remember { (6 downTo 0).map { daysAgo ->
+        val calendar = java.util.Calendar.getInstance().apply { add(java.util.Calendar.DAY_OF_YEAR, -daysAgo) }
+        Triple(dateKey(daysAgo), java.text.SimpleDateFormat("EEE", java.util.Locale.US).format(calendar.time), calendar.get(java.util.Calendar.DAY_OF_MONTH))
+    } }
+    val monthActive = (0 until 30).count { dateKey(it) in activeDates }
+    val completed = storyProgress.count { (title, position) ->
+        val story = stories.firstOrNull { it.title == title }
+        story != null && position >= story.sections.size + 1
+    }
+    val recent = readingHistory.take(8)
+    LazyColumn(Modifier.fillMaxSize().background(Page), contentPadding = PaddingValues(18.dp), verticalArrangement = Arrangement.spacedBy(14.dp)) {
+        item {
+            Text("Reading Statistics", color = Navy, fontSize = 26.sp, fontWeight = FontWeight.ExtraBold)
+            Text("A clear view of your learning activity", color = Color.Gray, fontSize = 13.sp)
+        }
+        item {
+            Row(horizontalArrangement = Arrangement.spacedBy(10.dp)) {
+                Column(Modifier.weight(1f).background(Color(0xFFE8EEE7), RoundedCornerShape(16.dp)).padding(14.dp)) {
+                    Text(readingHistory.size.toString(), color = Navy, fontSize = 25.sp, fontWeight = FontWeight.Bold)
+                    Text("Stories opened", color = Color.DarkGray, fontSize = 11.sp)
+                }
+                Column(Modifier.weight(1f).background(Color(0xFFF3E8E1), RoundedCornerShape(16.dp)).padding(14.dp)) {
+                    Text(completed.toString(), color = Navy, fontSize = 25.sp, fontWeight = FontWeight.Bold)
+                    Text("Completed", color = Color.DarkGray, fontSize = 11.sp)
+                }
+            }
+        }
+        item {
+            Column(Modifier.fillMaxWidth().background(Color.White, RoundedCornerShape(18.dp)).padding(16.dp)) {
+                Text("LAST 7 DAYS", color = Color(0xFF536F60), fontSize = 10.sp, fontWeight = FontWeight.Bold, letterSpacing = 1.sp)
+                Spacer(Modifier.height(12.dp))
+                week.forEach { day ->
+                    Row(verticalAlignment = Alignment.CenterVertically) {
+                        Text(day.second, modifier = Modifier.width(42.dp), color = Color.DarkGray, fontSize = 11.sp)
+                        Box(Modifier.weight(1f).height(9.dp).background(Color(0xFFE8E8E3), RoundedCornerShape(8.dp))) {
+                            if (day.first in activeDates) Box(Modifier.fillMaxWidth().height(9.dp).background(Blue, RoundedCornerShape(8.dp)))
+                        }
+                        Text(if (day.first in activeDates) "Active" else "—", modifier = Modifier.width(48.dp), textAlign = TextAlign.End, color = if (day.first in activeDates) Color(0xFF536F60) else Color.Gray, fontSize = 10.sp)
+                    }
+                    Spacer(Modifier.height(9.dp))
+                }
+            }
+        }
+        item {
+            Row(horizontalArrangement = Arrangement.spacedBy(10.dp)) {
+                Column(Modifier.weight(1f).background(Color.White, RoundedCornerShape(16.dp)).padding(14.dp)) {
+                    Text(monthActive.toString(), color = Navy, fontSize = 24.sp, fontWeight = FontWeight.Bold)
+                    Text("Active days · last 30", color = Color.Gray, fontSize = 10.sp)
+                }
+                Column(Modifier.weight(1f).background(Color.White, RoundedCornerShape(16.dp)).padding(14.dp)) {
+                    Text(saved.size.toString(), color = Navy, fontSize = 24.sp, fontWeight = FontWeight.Bold)
+                    Text("Saved stories", color = Color.Gray, fontSize = 10.sp)
+                }
+            }
+        }
+        item {
+            Text("RECENTLY OPENED", color = Color(0xFF536F60), fontSize = 10.sp, fontWeight = FontWeight.Bold, letterSpacing = 1.sp)
+        }
+        if (recent.isEmpty()) item {
+            Text("Your reading history will appear here as you explore stories.", color = Color.Gray, fontSize = 13.sp)
+        } else items(recent) { title ->
+            val story = stories.firstOrNull { it.title == title }
+            Row(Modifier.fillMaxWidth().background(Color.White, RoundedCornerShape(14.dp)).padding(13.dp), verticalAlignment = Alignment.CenterVertically) {
+                Column(Modifier.weight(1f)) {
+                    Text(title, color = Navy, fontWeight = FontWeight.SemiBold, fontSize = 13.sp, maxLines = 2)
+                    if (story != null) Text(story.category, color = Color.Gray, fontSize = 10.sp)
+                }
+                Text(if (storyProgress.containsKey(title)) "Progress saved" else "Opened", color = Color(0xFF536F60), fontSize = 10.sp)
+            }
+        }
+        item { Text("Activity is based on recorded story opens. Reading time is not estimated when reliable timing data is unavailable.", color = Color.Gray, fontSize = 10.sp, lineHeight = 15.sp) }
+    }
+}
 @Composable
 private fun HomeScreen(
     stories: List<Story>, query: String, onQuery: (String) -> Unit,
