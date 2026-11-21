@@ -301,6 +301,7 @@ private fun UpdatesApp(
         } else if (openedStory != null) {
             ArticleReaderScreen(
                 story = openedStory!!,
+                userId = userId,
                 isSaved = openedStory!!.title in saved,
                 initialProgress = storyProgress[openedStory!!.title] ?: 0,
                 onProgressChange = { position ->
@@ -1010,6 +1011,7 @@ private fun StoryCard(story: Story, isSaved: Boolean, onSave: () -> Unit, onOpen
 @Composable
 private fun ArticleReaderScreen(
     story: Story,
+    userId: String,
     isSaved: Boolean,
     initialProgress: Int,
     onProgressChange: (Int) -> Unit,
@@ -1141,10 +1143,10 @@ private fun ArticleReaderScreen(
                         Text(sections[index].body, color = if (isHighlighted) Color(0xFF493B20) else bodyColor, fontFamily = androidx.compose.ui.text.font.FontFamily.Serif, fontSize = fontSize.sp, lineHeight = (fontSize * 1.8f).sp)
                     }
                     Row(verticalAlignment = Alignment.CenterVertically) {
-                        TextButton(onClick = { isHighlighted = !isHighlighted; readerPrefs.edit().putBoolean(highlightKey, isHighlighted).apply() }) {
+                        TextButton(onClick = { isHighlighted = !isHighlighted; readerPrefs.edit().putBoolean(highlightKey, isHighlighted).apply(); CloudReadingRepository.saveReaderAnnotation(userId, highlightKey, isHighlighted.toString(), onError = { android.util.Log.w("UPDATES_ANNOTATIONS", it) }) }) {
                             Text(if (isHighlighted) "Remove highlight" else "Highlight section", fontSize = 11.sp, color = Blue)
                         }
-                        TextButton(onClick = { isSectionBookmarked = !isSectionBookmarked; readerPrefs.edit().putBoolean(bookmarkKey, isSectionBookmarked).apply() }) {
+                        TextButton(onClick = { isSectionBookmarked = !isSectionBookmarked; readerPrefs.edit().putBoolean(bookmarkKey, isSectionBookmarked).apply(); CloudReadingRepository.saveReaderAnnotation(userId, bookmarkKey, isSectionBookmarked.toString(), onError = { android.util.Log.w("UPDATES_ANNOTATIONS", it) }) }) {
                             Text(if (isSectionBookmarked) "Section bookmarked" else "Bookmark section", fontSize = 11.sp, color = Blue)
                         }
                     }
@@ -1165,7 +1167,7 @@ private fun ArticleReaderScreen(
                             onDismissRequest = { showNoteEditor = false },
                             title = { Text("Note · ${sections[index].title}") },
                             text = { OutlinedTextField(value = sectionNote, onValueChange = { sectionNote = it }, modifier = Modifier.fillMaxWidth(), minLines = 3, label = { Text("Your personal note") }) },
-                            confirmButton = { TextButton(onClick = { context.getSharedPreferences("updates_reader_notes", android.content.Context.MODE_PRIVATE).edit().putString(story.title + "::" + index, sectionNote.trim()).apply(); showNoteEditor = false }) { Text("Save") } },
+                            confirmButton = { TextButton(onClick = { context.getSharedPreferences("updates_reader_notes", android.content.Context.MODE_PRIVATE).edit().putString(story.title + "::" + index, sectionNote.trim()).apply(); CloudReadingRepository.saveReaderAnnotation(userId, story.title + "::" + index, sectionNote.trim(), onError = { android.util.Log.w("UPDATES_ANNOTATIONS", it) }); showNoteEditor = false }) { Text("Save") } },
                             dismissButton = { TextButton(onClick = { showNoteEditor = false }) { Text("Cancel") } }
                         )
                     }
