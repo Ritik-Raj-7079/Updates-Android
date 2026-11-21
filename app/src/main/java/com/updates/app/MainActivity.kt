@@ -1068,6 +1068,14 @@ private fun ArticleReaderScreen(
         Row(Modifier.fillMaxWidth().background(if (readingTheme == 1) Color(0xFF222429) else Color(0xFFF0EBDD)).padding(horizontal = 7.dp, vertical = 4.dp), verticalAlignment = Alignment.CenterVertically) {
             IconButton(onClick = onBack) { Icon(Icons.Filled.ArrowBack, "Back", tint = foreground) }
             Text("UPDATES READER", color = foreground, fontFamily = androidx.compose.ui.text.font.FontFamily.Serif, fontWeight = FontWeight.Bold, fontSize = 15.sp, letterSpacing = 1.sp, modifier = Modifier.weight(1f))
+            IconButton(onClick = {
+                val offlinePrefs = context.getSharedPreferences("updates_offline", android.content.Context.MODE_PRIVATE)
+                val sectionsJson = org.json.JSONArray().apply { story.sections.forEach { section -> put(org.json.JSONObject().put("title", section.title).put("body", section.body)) } }
+                val storyJson = org.json.JSONObject().put("category", story.category).put("title", story.title).put("summary", story.summary).put("readTime", story.readTime).put("sections", sectionsJson).toString()
+                val titles = (offlinePrefs.getStringSet("offline_titles", emptySet()) ?: emptySet()).toMutableSet()
+                titles.add(story.title)
+                offlinePrefs.edit().putString("offline_story_" + story.title, storyJson).putStringSet("offline_titles", titles).apply()
+            }) { Icon(Icons.Filled.Download, "Save for offline", tint = Blue) }
             IconButton(onClick = onSave) { Icon(if (isSaved) Icons.Filled.Bookmark else Icons.Filled.BookmarkBorder, "Bookmark", tint = Blue) }
             IconButton(onClick = { readingTheme = (readingTheme + 1) % backgrounds.size }) { Icon(Icons.Filled.Palette, "Reading theme", tint = foreground) }
         }
@@ -1249,7 +1257,7 @@ private fun PersonalLibraryScreen(
         Text("Your personal space for saved and recent reading", color = Color.Gray, fontSize = 12.sp)
         Spacer(Modifier.height(16.dp))
         Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-            listOf("Saved", "History", "Books", "My Notes").forEach { tab ->
+            listOf("Saved", "History", "Books", "My Notes", "Offline").forEach { tab ->
                 FilterChip(selected = section == tab, onClick = { section = tab }, label = { Text(tab) })
             }
         }
@@ -1374,6 +1382,36 @@ private fun PersonalLibraryScreen(
                                         Text(listOfNotNull(if (details.second) "Highlighted" else null, if (details.third) "Bookmarked" else null).joinToString(" · "), color = Color(0xFFC8795D), fontSize = 10.sp, fontWeight = FontWeight.Bold)
                                         Text("Tap to reopen article", color = Blue, fontSize = 10.sp)
                                     }
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+            "Offline" -> {
+                val context = androidx.compose.ui.platform.LocalContext.current
+                val offlinePrefs = remember { context.getSharedPreferences("updates_offline", android.content.Context.MODE_PRIVATE) }
+                val offlineStories = remember(stories) {
+                    (offlinePrefs.getStringSet("offline_titles", emptySet()) ?: emptySet()).mapNotNull { title ->
+                        runCatching {
+                            val json = org.json.JSONObject(offlinePrefs.getString("offline_story_" + title, null) ?: return@runCatching null)
+                            val array = json.optJSONArray("sections") ?: org.json.JSONArray()
+                            val sections = (0 until array.length()).map { index -> val item = array.getJSONObject(index); StorySection(item.optString("title"), item.optString("body")) }
+                            Story(json.optString("category"), json.optString("title"), json.optString("summary"), json.optString("readTime"), sections)
+                        }.getOrNull()
+                    }
+                }
+                Column(Modifier.fillMaxSize()) {
+                    Text(offlineStories.size.toString() + " articles saved on this device", color = Color.Gray, fontSize = 12.sp)
+                    Spacer(Modifier.height(10.dp))
+                    if (offlineStories.isEmpty()) Text("No offline articles yet. Open an article and tap the download icon to save it for offline reading.", color = Color.Gray, fontSize = 13.sp, modifier = Modifier.padding(top = 18.dp))
+                    else LazyColumn(verticalArrangement = Arrangement.spacedBy(10.dp)) {
+                        items(offlineStories) { story ->
+                            Card(Modifier.fillMaxWidth().clickable { onOpenStory(story) }, colors = CardDefaults.cardColors(containerColor = Color.White)) {
+                                Column(Modifier.padding(14.dp)) {
+                                    Text(story.category.uppercase(), color = Color(0xFF718B7C), fontSize = 10.sp, fontWeight = FontWeight.Bold)
+                                    Text(story.title, color = Navy, fontWeight = FontWeight.Bold, fontSize = 15.sp)
+                                    Text(story.readTime, color = Color.Gray, fontSize = 11.sp)
                                 }
                             }
                         }
