@@ -672,6 +672,43 @@ private fun SectionTitle(title: String, subtitle: String) {
 }
 
 @Composable
+private fun CompactStoryCard(
+    story: Story,
+    isSaved: Boolean,
+    modifier: Modifier = Modifier,
+    onSave: () -> Unit,
+    onOpen: () -> Unit
+) {
+    Column(
+        modifier.fillMaxWidth()
+            .heightIn(min = 174.dp)
+            .background(Color(0xFFFFFEFA), RoundedCornerShape(17.dp))
+            .clickable { onOpen() }
+            .padding(13.dp),
+        verticalArrangement = Arrangement.SpaceBetween
+    ) {
+        Column {
+            Text(story.title, color = Navy, fontFamily = androidx.compose.ui.text.font.FontFamily.Serif,
+                fontWeight = FontWeight.Bold, fontSize = 17.sp, lineHeight = 21.sp, maxLines = 4)
+            Spacer(Modifier.height(8.dp))
+            Text(story.category, color = Color(0xFF718B7C), fontSize = 9.sp,
+                fontWeight = FontWeight.Bold, letterSpacing = .8.sp)
+        }
+        Row(verticalAlignment = Alignment.CenterVertically) {
+            Icon(Icons.Filled.Schedule, null, tint = Color.Gray, modifier = Modifier.size(12.dp))
+            Spacer(Modifier.width(4.dp))
+            Text(story.readTime, color = Color.Gray, fontSize = 10.sp)
+            Spacer(Modifier.weight(1f))
+            IconButton(onClick = onSave, modifier = Modifier.size(28.dp)) {
+                Icon(if (isSaved) Icons.Filled.Bookmark else Icons.Filled.BookmarkBorder,
+                    contentDescription = if (isSaved) "Remove bookmark" else "Save article",
+                    tint = Color(0xFFC8795D), modifier = Modifier.size(18.dp))
+            }
+        }
+    }
+}
+
+@Composable
 private fun StoryCard(story: Story, isSaved: Boolean, onSave: () -> Unit, onOpen: () -> Unit) {
     Column(Modifier.fillMaxWidth().background(Color.White, RoundedCornerShape(20.dp)).clickable { onOpen() }.padding(16.dp)) {
         Row(verticalAlignment = Alignment.CenterVertically) {
