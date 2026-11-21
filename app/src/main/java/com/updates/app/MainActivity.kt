@@ -1124,7 +1124,22 @@ private fun ArticleReaderScreen(
                     Spacer(Modifier.height(5.dp))
                     Text(sections[index].title, color = foreground, fontFamily = androidx.compose.ui.text.font.FontFamily.Serif, fontSize = (fontSize + 3).sp, fontWeight = FontWeight.Bold, lineHeight = (fontSize * 1.5f).sp)
                     Spacer(Modifier.height(8.dp))
-                    Text(sections[index].body, color = bodyColor, fontFamily = androidx.compose.ui.text.font.FontFamily.Serif, fontSize = fontSize.sp, lineHeight = (fontSize * 1.8f).sp)
+                    val readerPrefs = remember { context.getSharedPreferences("updates_reader_notes", android.content.Context.MODE_PRIVATE) }
+                    val highlightKey = story.title + "::highlight::" + index
+                    val bookmarkKey = story.title + "::bookmark::" + index
+                    var isHighlighted by remember(story.title, index) { mutableStateOf(readerPrefs.getBoolean(highlightKey, false)) }
+                    var isSectionBookmarked by remember(story.title, index) { mutableStateOf(readerPrefs.getBoolean(bookmarkKey, false)) }
+                    Box(Modifier.fillMaxWidth().background(if (isHighlighted) Color(0xFFFFE8A3) else Color.Transparent, RoundedCornerShape(8.dp)).padding(if (isHighlighted) 8.dp else 0.dp)) {
+                        Text(sections[index].body, color = if (isHighlighted) Color(0xFF493B20) else bodyColor, fontFamily = androidx.compose.ui.text.font.FontFamily.Serif, fontSize = fontSize.sp, lineHeight = (fontSize * 1.8f).sp)
+                    }
+                    Row(verticalAlignment = Alignment.CenterVertically) {
+                        TextButton(onClick = { isHighlighted = !isHighlighted; readerPrefs.edit().putBoolean(highlightKey, isHighlighted).apply() }) {
+                            Text(if (isHighlighted) "Remove highlight" else "Highlight section", fontSize = 11.sp, color = Blue)
+                        }
+                        TextButton(onClick = { isSectionBookmarked = !isSectionBookmarked; readerPrefs.edit().putBoolean(bookmarkKey, isSectionBookmarked).apply() }) {
+                            Text(if (isSectionBookmarked) "Section bookmarked" else "Bookmark section", fontSize = 11.sp, color = Blue)
+                        }
+                    }
                     var showNoteEditor by remember(story.title, index) { mutableStateOf(false) }
                     var sectionNote by remember(story.title, index) {
                         mutableStateOf(context.getSharedPreferences("updates_reader_notes", android.content.Context.MODE_PRIVATE).getString(story.title + "::" + index, "") ?: "")
