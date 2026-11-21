@@ -17,6 +17,9 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.*
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
+import androidx.lifecycle.Lifecycle
+import androidx.lifecycle.LifecycleEventObserver
+import androidx.lifecycle.compose.LocalLifecycleOwner
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
@@ -593,6 +596,11 @@ private fun ReadingStatisticsScreen(
         val story = stories.firstOrNull { it.title == title }
         story != null && position >= story.sections.size + 1
     }
+    val totalReadingMs = remember(stories) {
+        stories.sumOf { story -> prefs.getLong("reading_time_ms_" + story.title, 0L) }
+    }
+    val totalMinutes = totalReadingMs / 60000L
+    val formattedReadingTime = if (totalMinutes >= 60) "${totalMinutes / 60}h ${totalMinutes % 60}m" else "${totalMinutes}m"
     val recent = readingHistory.take(8)
     LazyColumn(Modifier.fillMaxSize().background(Page), contentPadding = PaddingValues(18.dp), verticalArrangement = Arrangement.spacedBy(14.dp)) {
         item {
@@ -609,6 +617,13 @@ private fun ReadingStatisticsScreen(
                     Text(completed.toString(), color = Navy, fontSize = 25.sp, fontWeight = FontWeight.Bold)
                     Text("Completed", color = Color.DarkGray, fontSize = 11.sp)
                 }
+            }
+        }
+        item {
+            Column(Modifier.fillMaxWidth().background(Color(0xFFE8EEE7), RoundedCornerShape(16.dp)).padding(16.dp)) {
+                Text("TOTAL READING TIME", color = Color(0xFF536F60), fontSize = 10.sp, fontWeight = FontWeight.Bold, letterSpacing = 1.sp)
+                Text(formattedReadingTime, color = Navy, fontSize = 25.sp, fontWeight = FontWeight.Bold)
+                Text("Time counted while the reader is open and the app is in the foreground.", color = Color.Gray, fontSize = 10.sp)
             }
         }
         item {
@@ -1001,6 +1016,29 @@ private fun ArticleReaderScreen(
     onBack: () -> Unit,
     onSave: () -> Unit
 ) {
+    val context = androidx.compose.ui.platform.LocalContext.current
+    val lifecycleOwner = LocalLifecycleOwner.current
+    DisposableEffect(story.title, lifecycleOwner) {
+        val prefs = context.getSharedPreferences("updates_preferences", android.content.Context.MODE_PRIVATE)
+        var sessionStart = 0L
+        fun saveSession() {
+            if (sessionStart > 0L) {
+                val elapsed = (android.os.SystemClock.elapsedRealtime() - sessionStart).coerceAtLeast(0L)
+                val key = "reading_time_ms_" + story.title
+                prefs.edit().putLong(key, prefs.getLong(key, 0L) + elapsed).apply()
+                sessionStart = 0L
+            }
+        }
+        val observer = LifecycleEventObserver { _, event ->
+            when (event) {
+                Lifecycle.Event.ON_RESUME -> if (sessionStart == 0L) sessionStart = android.os.SystemClock.elapsedRealtime()
+                Lifecycle.Event.ON_PAUSE -> saveSession()
+                else -> Unit
+            }
+        }
+        lifecycleOwner.lifecycle.addObserver(observer)
+        onDispose { saveSession(); lifecycleOwner.lifecycle.removeObserver(observer) }
+    }
     val sections = remember(story.title, story.summary, story.sections) {
         if (story.sections.isNotEmpty()) story.sections
         else story.summary.split(Regex("\\n\\s*\\n"))
