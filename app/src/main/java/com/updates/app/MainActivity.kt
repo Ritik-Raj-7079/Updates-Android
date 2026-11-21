@@ -1391,31 +1391,55 @@ private fun PersonalLibraryScreen(
             "Offline" -> {
                 val context = androidx.compose.ui.platform.LocalContext.current
                 val offlinePrefs = remember { context.getSharedPreferences("updates_offline", android.content.Context.MODE_PRIVATE) }
-                val offlineStories = remember(stories) {
-                    (offlinePrefs.getStringSet("offline_titles", emptySet()) ?: emptySet()).mapNotNull { title ->
+                var offlineTitles by remember { mutableStateOf((offlinePrefs.getStringSet("offline_titles", emptySet()) ?: emptySet()).toSet()) }
+                var deleteTitle by remember { mutableStateOf<String?>(null) }
+                val offlineEntries = remember(offlineTitles) {
+                    offlineTitles.mapNotNull { title ->
                         runCatching {
-                            val json = org.json.JSONObject(offlinePrefs.getString("offline_story_" + title, null) ?: return@runCatching null)
+                            val raw = offlinePrefs.getString("offline_story_" + title, null) ?: return@runCatching null
+                            val json = org.json.JSONObject(raw)
                             val array = json.optJSONArray("sections") ?: org.json.JSONArray()
                             val sections = (0 until array.length()).map { index -> val item = array.getJSONObject(index); StorySection(item.optString("title"), item.optString("body")) }
-                            Story(json.optString("category"), json.optString("title"), json.optString("summary"), json.optString("readTime"), sections)
+                            val story = Story(json.optString("category"), json.optString("title"), json.optString("summary"), json.optString("readTime"), sections)
+                            Triple(story, title, raw.toByteArray(Charsets.UTF_8).size.toLong())
                         }.getOrNull()
                     }
                 }
+                val totalBytes = offlineEntries.sumOf { it.third }
+                val sizeLabel = if (totalBytes < 1024L * 1024L) "${"%.1f".format(totalBytes / 1024.0)} KB" else "${"%.2f".format(totalBytes / (1024.0 * 1024.0))} MB"
                 Column(Modifier.fillMaxSize()) {
-                    Text(offlineStories.size.toString() + " articles saved on this device", color = Color.Gray, fontSize = 12.sp)
+                    Text("${offlineEntries.size} articles · $sizeLabel used", color = Color.Gray, fontSize = 12.sp)
                     Spacer(Modifier.height(10.dp))
-                    if (offlineStories.isEmpty()) Text("No offline articles yet. Open an article and tap the download icon to save it for offline reading.", color = Color.Gray, fontSize = 13.sp, modifier = Modifier.padding(top = 18.dp))
+                    if (offlineEntries.isEmpty()) Text("No offline articles yet. Open an article and tap the download icon to save it for offline reading.", color = Color.Gray, fontSize = 13.sp, modifier = Modifier.padding(top = 18.dp))
                     else LazyColumn(verticalArrangement = Arrangement.spacedBy(10.dp)) {
-                        items(offlineStories) { story ->
-                            Card(Modifier.fillMaxWidth().clickable { onOpenStory(story) }, colors = CardDefaults.cardColors(containerColor = Color.White)) {
-                                Column(Modifier.padding(14.dp)) {
-                                    Text(story.category.uppercase(), color = Color(0xFF718B7C), fontSize = 10.sp, fontWeight = FontWeight.Bold)
-                                    Text(story.title, color = Navy, fontWeight = FontWeight.Bold, fontSize = 15.sp)
-                                    Text(story.readTime, color = Color.Gray, fontSize = 11.sp)
+                        items(offlineEntries, key = { it.second }) { entry ->
+                            val (story, title, bytes) = entry
+                            Card(colors = CardDefaults.cardColors(containerColor = Color.White), shape = RoundedCornerShape(14.dp)) {
+                                Row(Modifier.fillMaxWidth().padding(14.dp), verticalAlignment = Alignment.CenterVertically) {
+                                    Column(Modifier.weight(1f).clickable { onOpenStory(story) }) {
+                                        Text(story.category.uppercase(), color = Color(0xFF718B7C), fontSize = 10.sp, fontWeight = FontWeight.Bold)
+                                        Text(story.title, color = Navy, fontWeight = FontWeight.Bold, fontSize = 15.sp)
+                                        Text("${story.readTime} · ${"%.1f".format(bytes / 1024.0)} KB", color = Color.Gray, fontSize = 11.sp)
+                                    }
+                                    IconButton(onClick = { deleteTitle = title }) { Icon(Icons.Filled.DeleteOutline, contentDescription = "Remove offline article", tint = Color(0xFFC8795D)) }
                                 }
                             }
                         }
                     }
+                }
+                deleteTitle?.let { title ->
+                    AlertDialog(
+                        onDismissRequest = { deleteTitle = null },
+                        title = { Text("Remove offline article?") },
+                        text = { Text("This removes the downloaded copy from this device. Your saved article and reading history are not affected.") },
+                        confirmButton = { TextButton(onClick = {
+                            offlinePrefs.edit().remove("offline_story_" + title).apply()
+                            offlineTitles = (offlineTitles - title).toSet()
+                            offlinePrefs.edit().putStringSet("offline_titles", offlineTitles).apply()
+                            deleteTitle = null
+                        }) { Text("Remove") } },
+                        dismissButton = { TextButton(onClick = { deleteTitle = null }) { Text("Cancel") } }
+                    )
                 }
             }
             else -> {
