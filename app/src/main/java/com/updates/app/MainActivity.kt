@@ -391,7 +391,7 @@ private fun OnboardingFlow(
         }
         Spacer(Modifier.weight(1f))
         if (page == 0) {
-            BrandMark(size = 104)
+            BrandLockup(size = 104)
             Spacer(Modifier.height(24.dp))
             Text(
                 "Welcome to UPDATES",
@@ -479,15 +479,25 @@ private fun OnboardingFlow(
 }
 
 @Composable
-private fun BrandMark(size: Int) {
-    Box(
-        modifier = Modifier.size(size.dp).background(Navy, RoundedCornerShape((size / 4).dp)),
-        contentAlignment = Alignment.Center
+private fun BrandLockup(size: Int) {
+    Row(
+        modifier = Modifier.fillMaxWidth(),
+        horizontalArrangement = Arrangement.Center,
+        verticalAlignment = Alignment.CenterVertically
     ) {
         Image(
             painter = painterResource(R.drawable.updates_mark),
-            contentDescription = "UPDATES knowledge logo",
-            modifier = Modifier.fillMaxSize().padding((size / 8).dp)
+            contentDescription = "Updates open-book logo",
+            modifier = Modifier.size(size.dp)
+        )
+        Spacer(Modifier.width(12.dp))
+        Text(
+            "Updates",
+            color = Navy,
+            fontFamily = androidx.compose.ui.text.font.FontFamily.Serif,
+            fontSize = (size * 0.43f).sp,
+            fontWeight = FontWeight.Bold,
+            letterSpacing = (-1.2).sp
         )
     }
 }
