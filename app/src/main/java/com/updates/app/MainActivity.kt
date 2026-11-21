@@ -351,6 +351,7 @@ private fun UpdatesApp(
                     onReadingDataChange(saved, savedBooks, readingHistory)
                 },
                 readingHistory = readingHistory,
+                storyProgress = storyProgress,
                 onClearHistory = { readingHistory = emptyList(); onReadingDataChange(saved, savedBooks, readingHistory) },
                 stories = stories,
                 selectedTopics = selectedTopics,
@@ -523,6 +524,7 @@ private fun MainDashboard(
     onSaveBook: (String) -> Unit,
     onSave: (String) -> Unit,
     readingHistory: List<String>,
+    storyProgress: Map<String, Int>,
     onClearHistory: () -> Unit,
     stories: List<Story>,
     selectedTopics: Set<String>,
