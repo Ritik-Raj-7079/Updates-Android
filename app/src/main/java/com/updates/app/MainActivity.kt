@@ -1125,6 +1125,27 @@ private fun ArticleReaderScreen(
                     Text(sections[index].title, color = foreground, fontFamily = androidx.compose.ui.text.font.FontFamily.Serif, fontSize = (fontSize + 3).sp, fontWeight = FontWeight.Bold, lineHeight = (fontSize * 1.5f).sp)
                     Spacer(Modifier.height(8.dp))
                     Text(sections[index].body, color = bodyColor, fontFamily = androidx.compose.ui.text.font.FontFamily.Serif, fontSize = fontSize.sp, lineHeight = (fontSize * 1.8f).sp)
+                    var showNoteEditor by remember(story.title, index) { mutableStateOf(false) }
+                    var sectionNote by remember(story.title, index) {
+                        mutableStateOf(context.getSharedPreferences("updates_reader_notes", android.content.Context.MODE_PRIVATE).getString(story.title + "::" + index, "") ?: "")
+                    }
+                    Spacer(Modifier.height(8.dp))
+                    Row(verticalAlignment = Alignment.CenterVertically) {
+                        TextButton(onClick = { showNoteEditor = true }) {
+                            Icon(Icons.Filled.EditNote, contentDescription = null, tint = Blue)
+                            Text(if (sectionNote.isBlank()) "Add note" else "Edit note", fontSize = 11.sp)
+                        }
+                        if (sectionNote.isNotBlank()) Text("Note saved", color = Color(0xFF536F60), fontSize = 10.sp)
+                    }
+                    if (showNoteEditor) {
+                        AlertDialog(
+                            onDismissRequest = { showNoteEditor = false },
+                            title = { Text("Note · ${sections[index].title}") },
+                            text = { OutlinedTextField(value = sectionNote, onValueChange = { sectionNote = it }, modifier = Modifier.fillMaxWidth(), minLines = 3, label = { Text("Your personal note") }) },
+                            confirmButton = { TextButton(onClick = { context.getSharedPreferences("updates_reader_notes", android.content.Context.MODE_PRIVATE).edit().putString(story.title + "::" + index, sectionNote.trim()).apply(); showNoteEditor = false }) { Text("Save") } },
+                            dismissButton = { TextButton(onClick = { showNoteEditor = false }) { Text("Cancel") } }
+                        )
+                    }
                 }
             }
             item {
