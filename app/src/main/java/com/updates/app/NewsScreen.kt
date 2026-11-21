@@ -28,10 +28,10 @@ import org.xmlpull.v1.XmlPullParserFactory
 import java.net.HttpURLConnection
 import java.net.URL
 
-private data class NewsItem(val title: String, val summary: String, val link: String, val date: String, val source: String)
-private data class NewsFeed(val label: String, val url: String)
+internal data class NewsItem(val title: String, val summary: String, val link: String, val date: String, val source: String)
+internal data class NewsFeed(val label: String, val url: String)
 
-private val newsFeeds = linkedMapOf(
+internal val newsFeeds = linkedMapOf(
     "Top" to NewsFeed("BBC News", "https://feeds.bbci.co.uk/news/rss.xml"),
     "India" to NewsFeed("BBC News", "https://feeds.bbci.co.uk/news/world/asia/india/rss.xml"),
     "World" to NewsFeed("BBC News", "https://feeds.bbci.co.uk/news/world/rss.xml"),
@@ -124,7 +124,7 @@ fun NewsScreen() {
     }
 }
 
-private fun loadNewsFeed(feed: NewsFeed): List<NewsItem> {
+internal fun loadNewsFeed(feed: NewsFeed): List<NewsItem> {
     val connection = (URL(feed.url).openConnection() as HttpURLConnection).apply {
         requestMethod = "GET"
         connectTimeout = 12000
@@ -200,6 +200,30 @@ private fun NewsArticleReader(article: NewsItem, onBack: () -> Unit) {
                 Spacer(Modifier.height(14.dp))
                 Button(onClick = { context.startActivity(Intent(Intent.ACTION_VIEW, Uri.parse(article.link))) }, modifier = Modifier.fillMaxWidth(), shape = RoundedCornerShape(13.dp), colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF155EEF))) {
                     Text("Visit original publisher", fontWeight = FontWeight.SemiBold)
+                }
+            }
+        }
+    }
+}
+
+@Composable
+fun HomeNewsPreview(onOpenNews: () -> Unit) {
+    var items by remember { mutableStateOf<List<NewsItem>>(emptyList()) }
+    var loading by remember { mutableStateOf(true) }
+    var failed by remember { mutableStateOf(false) }
+    LaunchedEffect(Unit) {
+        try { items = withContext(Dispatchers.IO) { loadNewsFeed(newsFeeds.getValue("Technology")) }.take(3); failed = items.isEmpty() }
+        catch (_: Exception) { failed = true } finally { loading = false }
+    }
+    Column(verticalArrangement = Arrangement.spacedBy(9.dp)) {
+        when {
+            loading -> LinearProgressIndicator(Modifier.fillMaxWidth(), color = Color(0xFF718B7C), trackColor = Color(0xFFDDE5DC))
+            failed -> Text("News preview is temporarily unavailable. Open News to try again.", color = Color.Gray, fontSize = 11.sp)
+            else -> items.forEach { article ->
+                Column(Modifier.fillMaxWidth().background(Color(0xFFFFFEFA), RoundedCornerShape(13.dp)).clickable(onClick = onOpenNews).padding(12.dp)) {
+                    Text(article.title, color = Color(0xFF263238), fontSize = 13.sp, fontWeight = FontWeight.SemiBold, lineHeight = 18.sp, maxLines = 2)
+                    Spacer(Modifier.height(4.dp))
+                    Text("BBC News  •  " + article.date.ifBlank { "Latest" }, color = Color(0xFF718B7C), fontSize = 10.sp)
                 }
             }
         }
