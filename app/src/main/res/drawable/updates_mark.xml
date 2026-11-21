@@ -1,9 +1,20 @@
 <?xml version="1.0" encoding="utf-8"?>
 <vector xmlns:android="http://schemas.android.com/apk/res/android"
-    android:width="72dp" android:height="72dp" android:viewportWidth="72" android:viewportHeight="72">
-    <path android:fillColor="#8FA99A" android:pathData="M8,5 H64 V38 C64,57 51,67 36,67 C21,67 8,57 8,38 Z"/>
-    <path android:fillColor="#263238" android:pathData="M16,19 H23 V43 L36,51 L49,43 V19 H56 V47 L36,61 L16,49 Z"/>
-    <path android:fillColor="#FFFFFE" android:pathData="M20,14 L34,19 V48 L20,42 Z M52,14 L38,19 V48 L52,42 Z"/>
-    <path android:fillColor="#C8795D" android:pathData="M24,18 L32,21 V44 L24,40 Z"/>
-    <path android:fillColor="#C8795D" android:pathData="M35,43 L35,31 L43,24 L41,19 L55,17 L52,31 L48,27 L40,35 L40,47 Z"/>
+    android:width="100dp"
+    android:height="100dp"
+    android:viewportWidth="100"
+    android:viewportHeight="100">
+    <!-- Open pages: sage green left, terracotta right -->
+    <path android:fillColor="#8FA99A"
+        android:pathData="M12,22 L49,35 L49,91 L15,77 Q12,76 12,72 Z" />
+    <path android:fillColor="#C8795D"
+        android:pathData="M51,35 L88,22 L88,72 Q88,76 85,77 L51,91 Z" />
+    <!-- Page leaves -->
+    <path android:fillColor="#8FA99A" android:pathData="M17,18 L45,32 L17,10 Z" />
+    <path android:fillColor="#8FA99A" android:pathData="M30,9 L49,31 L30,3 Z" />
+    <path android:fillColor="#C8795D" android:pathData="M55,31 L83,18 L83,10 Z" />
+    <path android:fillColor="#C8795D" android:pathData="M51,31 L70,9 L70,3 Z" />
+    <!-- Forward-moving knowledge arrow -->
+    <path android:fillColor="#FFFDF7"
+        android:pathData="M22,57 C36,69 53,69 68,58 L61,49 L82,54 L72,75 L70,65 C53,79 32,76 22,57 Z" />
 </vector>
