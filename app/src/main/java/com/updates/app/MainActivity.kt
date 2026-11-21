@@ -558,7 +558,7 @@ private fun MainDashboard(
     ) { padding ->
         Column(Modifier.fillMaxSize().padding(padding)) {
             when (selectedTab) {
-                "Home" -> HomeScreen(stories, query, onQueryChange, saved, onSave, selectedTopics, readingHistory, selectedFeedCategory, onFeedCategoryChange, onOpenStory, { onTabSelected("Profile") }, { onTabSelected("News") }, { onTabSelected("Research") })
+                "Home" -> HomeScreen(stories, query, onQueryChange, saved, onSave, selectedTopics, readingHistory, storyProgress, selectedFeedCategory, onFeedCategoryChange, onOpenStory, { onTabSelected("Profile") }, { onTabSelected("News") }, { onTabSelected("Research") })
                 "Explore" -> KnowledgeExploreScreen(onExploreCategory)
                 "News" -> NewsScreen()
                 "Research" -> ResearchScreen()
@@ -573,7 +573,7 @@ private fun MainDashboard(
 @Composable
 private fun HomeScreen(
     stories: List<Story>, query: String, onQuery: (String) -> Unit,
-    saved: Set<String>, onSave: (String) -> Unit, selectedTopics: Set<String>, readingHistory: List<String>,
+    saved: Set<String>, onSave: (String) -> Unit, selectedTopics: Set<String>, readingHistory: List<String>, storyProgress: Map<String, Int>,
     selectedFeedCategory: String, onFeedCategoryChange: (String) -> Unit,
     onOpenStory: (Story) -> Unit, onProfileClick: () -> Unit,
     onNewsClick: () -> Unit, onResearchClick: () -> Unit
@@ -603,6 +603,25 @@ private fun HomeScreen(
         }
         .take(6)
     LazyColumn(Modifier.fillMaxSize(), contentPadding = PaddingValues(16.dp), verticalArrangement = Arrangement.spacedBy(16.dp)) {
+        item {
+            val inProgressCount = storyProgress.count { (title, position) ->
+                val story = stories.firstOrNull { it.title == title }
+                story != null && position > 0 && position < story.sections.size + 1
+            }
+            Column(Modifier.fillMaxWidth().background(Color(0xFFE8EEE7), RoundedCornerShape(18.dp)).padding(16.dp)) {
+                Text("YOUR READING JOURNEY", color = Color(0xFF536F60), fontSize = 10.sp, fontWeight = FontWeight.Bold, letterSpacing = 1.sp)
+                Spacer(Modifier.height(6.dp))
+                Text("Every page is progress.", color = Navy, fontFamily = androidx.compose.ui.text.font.FontFamily.Serif, fontSize = 21.sp, fontWeight = FontWeight.Bold)
+                Spacer(Modifier.height(12.dp))
+                Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
+                    Column { Text(readingHistory.size.toString(), color = Navy, fontSize = 22.sp, fontWeight = FontWeight.Bold); Text("Stories opened", color = Color.DarkGray, fontSize = 10.sp) }
+                    Column { Text(saved.size.toString(), color = Navy, fontSize = 22.sp, fontWeight = FontWeight.Bold); Text("Saved stories", color = Color.DarkGray, fontSize = 10.sp) }
+                    Column { Text(inProgressCount.toString(), color = Navy, fontSize = 22.sp, fontWeight = FontWeight.Bold); Text("In progress", color = Color.DarkGray, fontSize = 10.sp) }
+                }
+                Spacer(Modifier.height(8.dp))
+                Text("Based on your reading activity on this device and synced account.", color = Color(0xFF536F60), fontSize = 10.sp)
+            }
+        }
         item {
             Row(verticalAlignment = Alignment.CenterVertically) {
                 OutlinedTextField(value=query,onValueChange=onQuery,modifier=Modifier.weight(1f),placeholder={Text("Search stories")},leadingIcon={Icon(Icons.Filled.Search,null)},singleLine=true,shape=RoundedCornerShape(18.dp))
