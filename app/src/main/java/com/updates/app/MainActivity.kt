@@ -633,6 +633,8 @@ private fun HomeScreen(
                 Text("Stay curious about what's happening", color = Navy, fontFamily = androidx.compose.ui.text.font.FontFamily.Serif, fontSize = 19.sp, fontWeight = FontWeight.Bold)
                 Text("Read current headlines across technology, science, India and the world.", color = Color.DarkGray, fontSize = 12.sp, lineHeight = 18.sp)
                 Spacer(Modifier.height(10.dp))
+                HomeNewsPreview(onNewsClick)
+                Spacer(Modifier.height(8.dp))
                 Text("Explore latest news  →", color = Color(0xFF536F60), fontSize = 12.sp, fontWeight = FontWeight.Bold)
             }
         }
@@ -654,6 +656,8 @@ private fun HomeScreen(
                 Text("Ideas, papers and new perspectives", color = Navy, fontFamily = androidx.compose.ui.text.font.FontFamily.Serif, fontSize = 19.sp, fontWeight = FontWeight.Bold)
                 Text("Search scholarly works, explore authors and discover new research from around the world.", color = Color.DarkGray, fontSize = 12.sp, lineHeight = 18.sp)
                 Spacer(Modifier.height(10.dp))
+                HomeResearchPreview(onResearchClick)
+                Spacer(Modifier.height(8.dp))
                 Text("Explore research papers  →", color = Orange, fontSize = 12.sp, fontWeight = FontWeight.Bold)
             }
         }
