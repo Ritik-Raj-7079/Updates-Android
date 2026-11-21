@@ -615,6 +615,11 @@ private fun HomeScreen(
             .putStringSet("reading_active_dates", activeDates.take(366).toSet()).apply()
         onOpenStory(story)
     }
+    val completedCount = storyProgress.count { (title, position) ->
+        val story = stories.firstOrNull { it.title == title }
+        story != null && position >= story.sections.size + 1
+    }
+    val completionRate = if (readingHistory.isEmpty()) 0 else ((completedCount * 100) / readingHistory.size).coerceIn(0, 100)
     val filtered = stories.filter { query.isBlank() || it.title.contains(query,true) || it.category.contains(query,true) || it.summary.contains(query,true) }
     val personalized = stories
         .filter { it.title !in readingHistory }
@@ -703,6 +708,19 @@ private fun HomeScreen(
                         }
                     }
                 }
+            }
+        }
+        item {
+            Column(Modifier.fillMaxWidth().background(Color.White, RoundedCornerShape(18.dp)).padding(16.dp)) {
+                Text("READING INSIGHTS", color = Color(0xFF536F60), fontSize = 10.sp, fontWeight = FontWeight.Bold, letterSpacing = 1.sp)
+                Spacer(Modifier.height(8.dp))
+                Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
+                    Column { Text(completedCount.toString(), color = Navy, fontSize = 23.sp, fontWeight = FontWeight.Bold); Text("Completed", color = Color.Gray, fontSize = 11.sp) }
+                    Column { Text("$completionRate%", color = Navy, fontSize = 23.sp, fontWeight = FontWeight.Bold); Text("Completion rate", color = Color.Gray, fontSize = 11.sp) }
+                    Column { Text(storyProgress.size.toString(), color = Navy, fontSize = 23.sp, fontWeight = FontWeight.Bold); Text("Progress saved", color = Color.Gray, fontSize = 11.sp) }
+                }
+                Spacer(Modifier.height(8.dp))
+                Text("Completion is based on reaching the final section in the reader. Your reading progress is saved automatically.", color = Color.Gray, fontSize = 10.sp, lineHeight = 15.sp)
             }
         }
         item {
