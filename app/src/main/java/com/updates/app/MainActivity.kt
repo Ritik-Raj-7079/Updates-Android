@@ -1249,7 +1249,7 @@ private fun PersonalLibraryScreen(
         Text("Your personal space for saved and recent reading", color = Color.Gray, fontSize = 12.sp)
         Spacer(Modifier.height(16.dp))
         Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-            listOf("Saved", "History", "Books").forEach { tab ->
+            listOf("Saved", "History", "Books", "My Notes").forEach { tab ->
                 FilterChip(selected = section == tab, onClick = { section = tab }, label = { Text(tab) })
             }
         }
@@ -1336,6 +1336,48 @@ private fun PersonalLibraryScreen(
                 if (recentStories.isEmpty()) Text("Your reading history will appear here when you open an article.", color = Color.Gray, modifier = Modifier.padding(top = 20.dp))
                 else LazyColumn(verticalArrangement = Arrangement.spacedBy(12.dp)) {
                     items(recentStories) { story -> StoryCard(story, story.title in savedTitles, onSave = { onToggleSaved(story.title) }, onOpen = { onOpenStory(story) }) }
+                }
+            }
+            "My Notes" -> {
+                val context = androidx.compose.ui.platform.LocalContext.current
+                val readerPrefs = remember { context.getSharedPreferences("updates_reader_notes", android.content.Context.MODE_PRIVATE) }
+                val entries = remember(stories) {
+                    buildList {
+                        stories.forEach { story ->
+                            story.sections.forEachIndexed { index, item ->
+                                val note = readerPrefs.getString(story.title + "::" + index, "").orEmpty()
+                                val highlighted = readerPrefs.getBoolean(story.title + "::highlight::" + index, false)
+                                val bookmarked = readerPrefs.getBoolean(story.title + "::bookmark::" + index, false)
+                                if (note.isNotBlank() || highlighted || bookmarked) add(Triple(story, index, Triple(note, highlighted, bookmarked)))
+                            }
+                        }
+                    }
+                }
+                Column(Modifier.fillMaxSize()) {
+                    Text("Your reading notes and marked sections", color = Color.Gray, fontSize = 12.sp)
+                    Spacer(Modifier.height(10.dp))
+                    if (entries.isEmpty()) {
+                        Text("No notes, highlights or section bookmarks yet. Open an article and mark a section to find it here.", color = Color.Gray, fontSize = 13.sp, modifier = Modifier.padding(top = 18.dp))
+                    } else {
+                        LazyColumn(verticalArrangement = Arrangement.spacedBy(10.dp), contentPadding = PaddingValues(bottom = 20.dp)) {
+                            items(entries) { entry ->
+                                val (story, index, details) = entry
+                                Card(modifier = Modifier.fillMaxWidth().clickable { onOpenStory(story) }, colors = CardDefaults.cardColors(containerColor = Color(0xFFFFFEFA)), shape = RoundedCornerShape(14.dp)) {
+                                    Column(Modifier.padding(14.dp)) {
+                                        Text(story.title, color = Navy, fontWeight = FontWeight.Bold, fontSize = 14.sp)
+                                        Text(story.sections[index].title, color = Color(0xFF718B7C), fontSize = 12.sp)
+                                        if (details.first.isNotBlank()) {
+                                            Spacer(Modifier.height(6.dp))
+                                            Text(details.first, color = Color.DarkGray, fontSize = 12.sp, maxLines = 4)
+                                        }
+                                        Spacer(Modifier.height(6.dp))
+                                        Text(listOfNotNull(if (details.second) "Highlighted" else null, if (details.third) "Bookmarked" else null).joinToString(" · "), color = Color(0xFFC8795D), fontSize = 10.sp, fontWeight = FontWeight.Bold)
+                                        Text("Tap to reopen article", color = Blue, fontSize = 10.sp)
+                                    }
+                                }
+                            }
+                        }
+                    }
                 }
             }
             else -> {
