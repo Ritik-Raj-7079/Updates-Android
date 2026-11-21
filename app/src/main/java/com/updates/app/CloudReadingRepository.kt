@@ -79,4 +79,26 @@ object CloudReadingRepository {
             onError(error.localizedMessage ?: "Could not sync reading progress.")
         }
     }
+    fun saveReaderAnnotation(uid: String, key: String, value: String, onError: (String) -> Unit = {}) {
+        if (uid.isBlank() || key.isBlank()) return
+        val document = db.collection("users").document(uid)
+            .collection("privateData").document("readerAnnotations")
+        db.runTransaction { transaction ->
+            val snapshot = transaction.get(document)
+            val annotations = mutableMapOf<String, String>()
+            (snapshot.get("annotations") as? Map<*, *>)?.forEach { (existingKey, existingValue) ->
+                if (existingKey is String && existingValue is String) annotations[existingKey] = existingValue
+            }
+            if (value.isBlank()) annotations.remove(key.take(240))
+            else annotations[key.take(240)] = value.take(4000)
+            transaction.set(document, mapOf(
+                "annotations" to annotations,
+                "updatedAt" to com.google.firebase.firestore.FieldValue.serverTimestamp()
+            ), SetOptions.merge())
+            null
+        }.addOnFailureListener { error ->
+            onError(error.localizedMessage ?: "Could not sync reader annotations.")
+        }
+    }
+
 }
