@@ -584,6 +584,22 @@ private fun HomeScreen(
     val goalPrefs = remember { context.getSharedPreferences("updates_preferences", android.content.Context.MODE_PRIVATE) }
     val todayKey = remember { java.text.SimpleDateFormat("yyyy-MM-dd", java.util.Locale.US).format(java.util.Date()) }
     var dailyGoal by remember { mutableIntStateOf(goalPrefs.getInt("daily_reading_goal", 3).coerceIn(1, 10)) }
+    var activeDates by remember { mutableStateOf(goalPrefs.getStringSet("reading_active_dates", emptySet())?.toSet() ?: emptySet()) }
+    fun dateKey(daysAgo: Int): String = java.text.SimpleDateFormat("yyyy-MM-dd", java.util.Locale.US).format(
+        java.util.Calendar.getInstance().apply { add(java.util.Calendar.DAY_OF_YEAR, -daysAgo) }.time
+    )
+    val streakOffset = if (todayKey in activeDates) 0 else 1
+    val currentStreak = remember(todayKey, activeDates) {
+        var count = 0
+        while (dateKey(streakOffset + count) in activeDates && count < 366) count++
+        count
+    }
+    val weekDays = remember(todayKey) {
+        (6 downTo 0).map { daysAgo ->
+            val calendar = java.util.Calendar.getInstance().apply { add(java.util.Calendar.DAY_OF_YEAR, -daysAgo) }
+            Triple(dateKey(daysAgo), java.text.SimpleDateFormat("EE", java.util.Locale.US).format(calendar.time).take(1), calendar.get(java.util.Calendar.DAY_OF_MONTH))
+        }
+    }
     var dailyOpened by remember {
         val storedDate = goalPrefs.getString("daily_open_date", "") ?: ""
         mutableIntStateOf(if (storedDate == todayKey) goalPrefs.getInt("daily_open_count", 0) else 0)
@@ -594,7 +610,9 @@ private fun HomeScreen(
             goalPrefs.edit().putString("daily_open_date", todayKey).putInt("daily_open_count", 0).apply()
         }
         dailyOpened += 1
-        goalPrefs.edit().putInt("daily_open_count", dailyOpened).apply()
+        activeDates = (activeDates + todayKey).toSet()
+        goalPrefs.edit().putInt("daily_open_count", dailyOpened)
+            .putStringSet("reading_active_dates", activeDates.take(366).toSet()).apply()
         onOpenStory(story)
     }
     val filtered = stories.filter { query.isBlank() || it.title.contains(query,true) || it.category.contains(query,true) || it.summary.contains(query,true) }
@@ -658,6 +676,33 @@ private fun HomeScreen(
                 LinearProgressIndicator(progress = { (dailyOpened.toFloat() / dailyGoal).coerceIn(0f, 1f) }, modifier = Modifier.fillMaxWidth().height(7.dp), color = Blue, trackColor = Color(0xFFE5EBE2))
                 Spacer(Modifier.height(5.dp))
                 Text(if (dailyOpened >= dailyGoal) "Daily goal reached — great progress!" else "Open " + (dailyGoal - dailyOpened) + " more stories to reach the daily goal.", color = Color.Gray, fontSize = 11.sp)
+            }
+        }
+        item {
+            Column(Modifier.fillMaxWidth().background(Color(0xFFFFF8F2), RoundedCornerShape(18.dp)).padding(16.dp)) {
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    Column(Modifier.weight(1f)) {
+                        Text("READING STREAK", color = Orange, fontSize = 10.sp, fontWeight = FontWeight.Bold, letterSpacing = 1.sp)
+                        Text("$currentStreak ${if (currentStreak == 1) "day" else "days"} in a row", color = Navy, fontFamily = androidx.compose.ui.text.font.FontFamily.Serif, fontSize = 21.sp, fontWeight = FontWeight.Bold)
+                        Text("Open a story each day to build your learning habit.", color = Color.Gray, fontSize = 11.sp)
+                    }
+                    Icon(Icons.Filled.LocalFireDepartment, contentDescription = "Reading streak", tint = Orange, modifier = Modifier.size(34.dp))
+                }
+                Spacer(Modifier.height(14.dp))
+                Text("LAST 7 DAYS", color = Color(0xFF536F60), fontSize = 10.sp, fontWeight = FontWeight.Bold, letterSpacing = 1.sp)
+                Spacer(Modifier.height(8.dp))
+                Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
+                    weekDays.forEach { day ->
+                        Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                            Box(Modifier.size(30.dp).background(if (day.first in activeDates) Blue else Color(0xFFE8E8E3), CircleShape), contentAlignment = Alignment.Center) {
+                                if (day.first in activeDates) Icon(Icons.Filled.Check, contentDescription = "Reading activity", tint = Color.White, modifier = Modifier.size(16.dp))
+                                else Text(day.third.toString(), color = Color.Gray, fontSize = 10.sp)
+                            }
+                            Spacer(Modifier.height(4.dp))
+                            Text(day.second, color = Color.Gray, fontSize = 10.sp)
+                        }
+                    }
+                }
             }
         }
         item {
