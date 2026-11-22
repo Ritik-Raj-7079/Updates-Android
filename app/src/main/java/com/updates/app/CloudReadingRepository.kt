@@ -69,7 +69,10 @@ object CloudReadingRepository {
             }
             // Keep the original title as the map key; transaction safely handles
             // punctuation and concurrent progress updates from another device.
-            progress[title.take(120)] = position.coerceAtLeast(0)
+            val safeTitle = title.take(120)
+            // Keep the furthest section reached so a delayed update from another
+            // device cannot move cloud progress backwards.
+            progress[safeTitle] = maxOf(progress[safeTitle] ?: 0, position.coerceAtLeast(0))
             transaction.set(document, mapOf(
                 "storyProgress" to progress,
                 "updatedAt" to com.google.firebase.firestore.FieldValue.serverTimestamp()
