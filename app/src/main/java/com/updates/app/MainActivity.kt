@@ -168,7 +168,7 @@ private fun UpdatesApp(
     var cloudProfileMessage by remember { mutableStateOf("Syncing profile…") }
     var cloudArticleMessage by remember { mutableStateOf("Loading community…") }
     var cloudSyncStatus by remember { mutableStateOf("Checking cloud sync…") }
-    var lastSyncMillis by remember { mutableStateOf(0L) }
+    var lastSyncMillis by remember { mutableStateOf(appContext.getSharedPreferences("updates_sync_state", android.content.Context.MODE_PRIVATE).getLong("last_successful_sync", 0L)) }
     var syncAttempt by remember { mutableIntStateOf(0) }
     fun refreshCloudSync() {
         cloudSyncStatus = "Syncing reading library…"
@@ -181,6 +181,7 @@ private fun UpdatesApp(
             onReadingDataChange(saved, savedBooks, readingHistory)
             cloudSyncStatus = "Reading library synced"
             lastSyncMillis = System.currentTimeMillis()
+            appContext.getSharedPreferences("updates_sync_state", android.content.Context.MODE_PRIVATE).edit().putLong("last_successful_sync", lastSyncMillis).apply()
         }, onError = { cloudSyncStatus = "Sync failed: $it" })
         CloudReadingRepository.loadReaderAnnotations(userId, onSuccess = { cloudAnnotations ->
             val prefs = appContext.getSharedPreferences("updates_reader_notes", android.content.Context.MODE_PRIVATE)
@@ -195,6 +196,7 @@ private fun UpdatesApp(
             editor.apply()
             if (cloudSyncStatus.startsWith("Reading library synced")) cloudSyncStatus = "Library and annotations synced"
             lastSyncMillis = System.currentTimeMillis()
+            appContext.getSharedPreferences("updates_sync_state", android.content.Context.MODE_PRIVATE).edit().putLong("last_successful_sync", lastSyncMillis).apply()
         }, onError = { cloudSyncStatus = "Annotation sync failed: $it" })
     }
 
