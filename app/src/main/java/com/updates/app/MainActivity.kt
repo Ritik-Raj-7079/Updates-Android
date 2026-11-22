@@ -8,6 +8,8 @@ import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.verticalScroll
+import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.foundation.lazy.items
@@ -350,6 +352,12 @@ private fun UpdatesApp(
                 profileBio = profileBio,
                 cloudProfileMessage = cloudProfileMessage,
                 cloudArticleMessage = cloudArticleMessage,
+                cloudSyncStatus = cloudSyncStatus,
+                lastSyncMillis = lastSyncMillis,
+                syncSavedCount = saved.size,
+                syncHistoryCount = readingHistory.size,
+                syncProgressCount = storyProgress.size,
+                onRetrySync = { refreshCloudSync() },
                 currentUserId = userId,
                 onSignOut = onSignOut,
                 onProfileSave = { name, bio ->
@@ -540,6 +548,12 @@ private fun MainDashboard(
     profileBio: String,
     cloudProfileMessage: String,
     cloudArticleMessage: String,
+    cloudSyncStatus: String,
+    lastSyncMillis: Long,
+    syncSavedCount: Int,
+    syncHistoryCount: Int,
+    syncProgressCount: Int,
+    onRetrySync: () -> Unit,
     currentUserId: String,
     onSignOut: () -> Unit,
     onProfileSave: (String, String) -> Unit,
@@ -597,10 +611,10 @@ private fun MainDashboard(
                     userId = currentUserId,
                     status = cloudSyncStatus,
                     lastSyncMillis = lastSyncMillis,
-                    savedCount = saved.size,
-                    historyCount = readingHistory.size,
-                    progressCount = storyProgress.size,
-                    onRetry = { refreshCloudSync() }
+                    savedCount = syncSavedCount,
+                    historyCount = syncHistoryCount,
+                    progressCount = syncProgressCount,
+                    onRetry = onRetrySync
                 )
                 else -> ArticlePublishingScreen(communityArticles, displayName, onPublishArticle, onDeleteArticle, currentUserId, cloudArticleMessage)
             }
