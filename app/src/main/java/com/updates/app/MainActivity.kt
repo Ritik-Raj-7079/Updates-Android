@@ -186,7 +186,7 @@ private fun UpdatesApp(
             appContext.getSharedPreferences("updates_sync_state", android.content.Context.MODE_PRIVATE).edit().putLong("last_successful_sync", lastSyncMillis).apply()
         }, onError = { cloudSyncStatus = "Sync failed: $it" })
         CloudReadingRepository.loadReaderAnnotations(userId, onSuccess = { cloudAnnotations ->
-            val prefs = appContext.getSharedPreferences("updates_reader_notes", android.content.Context.MODE_PRIVATE)
+            val prefs = appContext.getSharedPreferences("updates_reader_notes_" + userId, android.content.Context.MODE_PRIVATE)
             val editor = prefs.edit()
             cloudAnnotations.forEach { (key, value) ->
                 when {
@@ -1223,7 +1223,7 @@ private fun ArticleReaderScreen(
                     Spacer(Modifier.height(5.dp))
                     Text(sections[index].title, color = foreground, fontFamily = androidx.compose.ui.text.font.FontFamily.Serif, fontSize = (fontSize + 3).sp, fontWeight = FontWeight.Bold, lineHeight = (fontSize * 1.5f).sp)
                     Spacer(Modifier.height(8.dp))
-                    val readerPrefs = remember { context.getSharedPreferences("updates_reader_notes", android.content.Context.MODE_PRIVATE) }
+                    val readerPrefs = remember { context.getSharedPreferences("updates_reader_notes_" + userId, android.content.Context.MODE_PRIVATE) }
                     val highlightKey = story.title + "::highlight::" + index
                     val bookmarkKey = story.title + "::bookmark::" + index
                     var isHighlighted by remember(story.title, index) { mutableStateOf(readerPrefs.getBoolean(highlightKey, false)) }
@@ -1241,7 +1241,7 @@ private fun ArticleReaderScreen(
                     }
                     var showNoteEditor by remember(story.title, index) { mutableStateOf(false) }
                     var sectionNote by remember(story.title, index) {
-                        mutableStateOf(context.getSharedPreferences("updates_reader_notes", android.content.Context.MODE_PRIVATE).getString(story.title + "::" + index, "") ?: "")
+                        mutableStateOf(context.getSharedPreferences("updates_reader_notes_" + userId, android.content.Context.MODE_PRIVATE).getString(story.title + "::" + index, "") ?: "")
                     }
                     Spacer(Modifier.height(8.dp))
                     Row(verticalAlignment = Alignment.CenterVertically) {
@@ -1256,7 +1256,7 @@ private fun ArticleReaderScreen(
                             onDismissRequest = { showNoteEditor = false },
                             title = { Text("Note · ${sections[index].title}") },
                             text = { OutlinedTextField(value = sectionNote, onValueChange = { sectionNote = it }, modifier = Modifier.fillMaxWidth(), minLines = 3, label = { Text("Your personal note") }) },
-                            confirmButton = { TextButton(onClick = { context.getSharedPreferences("updates_reader_notes", android.content.Context.MODE_PRIVATE).edit().putString(story.title + "::" + index, sectionNote.trim()).apply(); CloudReadingRepository.saveReaderAnnotation(userId, story.title + "::" + index, sectionNote.trim(), onError = { android.util.Log.w("UPDATES_ANNOTATIONS", it) }); showNoteEditor = false }) { Text("Save") } },
+                            confirmButton = { TextButton(onClick = { context.getSharedPreferences("updates_reader_notes_" + userId, android.content.Context.MODE_PRIVATE).edit().putString(story.title + "::" + index, sectionNote.trim()).apply(); CloudReadingRepository.saveReaderAnnotation(userId, story.title + "::" + index, sectionNote.trim(), onError = { android.util.Log.w("UPDATES_ANNOTATIONS", it) }); showNoteEditor = false }) { Text("Save") } },
                             dismissButton = { TextButton(onClick = { showNoteEditor = false }) { Text("Cancel") } }
                         )
                     }
@@ -1439,7 +1439,7 @@ private fun PersonalLibraryScreen(
             }
             "My Notes" -> {
                 val context = androidx.compose.ui.platform.LocalContext.current
-                val readerPrefs = remember { context.getSharedPreferences("updates_reader_notes", android.content.Context.MODE_PRIVATE) }
+                val readerPrefs = remember { context.getSharedPreferences("updates_reader_notes_" + userId, android.content.Context.MODE_PRIVATE) }
                 val entries = remember(stories) {
                     buildList {
                         stories.forEach { story ->
