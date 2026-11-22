@@ -177,7 +177,9 @@ private fun UpdatesApp(
             saved = saved + cloudData.savedStories
             savedBooks = savedBooks + cloudData.savedBooks
             readingHistory = (readingHistory + cloudData.history).distinct().take(50)
-            storyProgress = storyProgress + cloudData.storyProgress
+            storyProgress = (storyProgress.keys + cloudData.storyProgress.keys).associateWith { title ->
+                maxOf(storyProgress[title] ?: 0, cloudData.storyProgress[title] ?: 0)
+            }
             onReadingDataChange(saved, savedBooks, readingHistory)
             cloudSyncStatus = "Reading library synced"
             lastSyncMillis = System.currentTimeMillis()
