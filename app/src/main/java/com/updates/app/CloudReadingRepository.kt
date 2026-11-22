@@ -101,4 +101,17 @@ object CloudReadingRepository {
         }
     }
 
+    fun loadReaderAnnotations(uid: String, onSuccess: (Map<String, String>) -> Unit, onError: (String) -> Unit = {}) {
+        if (uid.isBlank()) { onError("Sign in to restore reader annotations."); return }
+        db.collection("users").document(uid).collection("privateData").document("readerAnnotations")
+            .get()
+            .addOnSuccessListener { doc ->
+                val annotations = (doc.get("annotations") as? Map<*, *>)?.entries
+                    ?.filter { it.key is String && it.value is String }
+                    ?.associate { (it.key as String) to (it.value as String) } ?: emptyMap()
+                onSuccess(annotations)
+            }
+            .addOnFailureListener { onError(it.localizedMessage ?: "Could not restore reader annotations.") }
+    }
+
 }
