@@ -152,6 +152,7 @@ private fun UpdatesApp(
     var showOnboarding by remember { mutableStateOf(showOnboardingInitially) }
     var selectedTopics by remember { mutableStateOf(initialTopics) }
     var selectedTab by remember { mutableStateOf("Home") }
+    var syncCenterOpened by remember { mutableStateOf(false) }
     var showExitDialog by remember { mutableStateOf(false) }
     val appContext = androidx.compose.ui.platform.LocalContext.current
     var query by remember { mutableStateOf("") }
@@ -164,6 +165,36 @@ private fun UpdatesApp(
     var profileBio by remember { mutableStateOf(initialProfileBio) }
     var cloudProfileMessage by remember { mutableStateOf("Syncing profile…") }
     var cloudArticleMessage by remember { mutableStateOf("Loading community…") }
+    var cloudSyncStatus by remember { mutableStateOf("Checking cloud sync…") }
+    var lastSyncMillis by remember { mutableStateOf(0L) }
+    var syncAttempt by remember { mutableIntStateOf(0) }
+    fun refreshCloudSync() {
+        cloudSyncStatus = "Syncing reading library…"
+        syncAttempt++
+        CloudReadingRepository.load(userId, onSuccess = { cloudData ->
+            saved = saved + cloudData.savedStories
+            savedBooks = savedBooks + cloudData.savedBooks
+            readingHistory = (readingHistory + cloudData.history).distinct().take(50)
+            storyProgress = storyProgress + cloudData.storyProgress
+            onReadingDataChange(saved, savedBooks, readingHistory)
+            cloudSyncStatus = "Reading library synced"
+            lastSyncMillis = System.currentTimeMillis()
+        }, onError = { cloudSyncStatus = "Sync failed: $it" })
+        CloudReadingRepository.loadReaderAnnotations(userId, onSuccess = { cloudAnnotations ->
+            val prefs = appContext.getSharedPreferences("updates_reader_notes", android.content.Context.MODE_PRIVATE)
+            val editor = prefs.edit()
+            cloudAnnotations.forEach { (key, value) ->
+                when {
+                    key.contains("::highlight::") -> editor.putBoolean(key, value.toBoolean())
+                    key.contains("::bookmark::") -> editor.putBoolean(key, value.toBoolean())
+                    else -> editor.putString(key, value)
+                }
+            }
+            editor.apply()
+            if (cloudSyncStatus.startsWith("Reading library synced")) cloudSyncStatus = "Library and annotations synced"
+            lastSyncMillis = System.currentTimeMillis()
+        }, onError = { cloudSyncStatus = "Annotation sync failed: $it" })
+    }
 
     DisposableEffect(userId) {
         val registration = CloudArticleRepository.observe(
@@ -553,7 +584,7 @@ private fun MainDashboard(
         containerColor = Page,
         bottomBar = {
             NavigationBar(containerColor = Color.White) {
-                listOf("Home", "Explore", "News", "Research", "Stats", "Library", "Profile").forEach { tab ->
+                listOf("Home", "Explore", "News", "Research", "Stats", "Library", "Profile", "Sync").forEach { tab ->
                     val icon = when (tab) {
                         "Home" -> Icons.Filled.Home
                         "Explore" -> Icons.Filled.Explore
@@ -562,6 +593,7 @@ private fun MainDashboard(
                         "Stats" -> Icons.Filled.Insights
                         "Library" -> Icons.Filled.Bookmarks
                         "Profile" -> Icons.Filled.Person
+                        "Sync" -> Icons.Filled.CloudSync
                         else -> Icons.Filled.Edit
                     }
                     NavigationBarItem(
@@ -584,12 +616,62 @@ private fun MainDashboard(
                 "Stats" -> ReadingStatisticsScreen(stories, readingHistory, storyProgress, saved)
                 "Library" -> PersonalLibraryScreen(stories, saved, readingHistory, onSave, onClearHistory, onOpenStory, savedBooks, onSaveBook)
                 "Profile" -> UserProfileScreen(displayName, profileBio, communityArticles.count { it.authorUid == currentUserId }, cloudProfileMessage, onProfileSave, { onTabSelected("Write") }, onSignOut)
+                "Sync" -> SyncCenterScreen(
+                    userId = currentUserId,
+                    status = cloudSyncStatus,
+                    lastSyncMillis = lastSyncMillis,
+                    savedCount = saved.size,
+                    historyCount = readingHistory.size,
+                    progressCount = storyProgress.size,
+                    onRetry = { refreshCloudSync() }
+                )
                 else -> ArticlePublishingScreen(communityArticles, displayName, onPublishArticle, onDeleteArticle, currentUserId, cloudArticleMessage)
             }
         }
     }
 }
 
+
+@Composable
+private fun SyncCenterScreen(
+    userId: String,
+    status: String,
+    lastSyncMillis: Long,
+    savedCount: Int,
+    historyCount: Int,
+    progressCount: Int,
+    onRetry: () -> Unit
+) {
+    val dateText = if (lastSyncMillis > 0L) java.text.SimpleDateFormat("dd MMM, hh:mm a", java.util.Locale.getDefault()).format(java.util.Date(lastSyncMillis)) else "No successful sync this session"
+    Column(Modifier.fillMaxSize().verticalScroll(rememberScrollState()).padding(20.dp)) {
+        SectionTitle("Sync Center", "Manage your reading data across devices")
+        Spacer(Modifier.height(12.dp))
+        Card(colors = CardDefaults.cardColors(containerColor = Color(0xFFE5EBE2)), modifier = Modifier.fillMaxWidth()) {
+            Column(Modifier.padding(18.dp)) {
+                Icon(Icons.Filled.CloudSync, null, tint = Color(0xFF536F60), modifier = Modifier.size(32.dp))
+                Spacer(Modifier.height(8.dp))
+                Text(if (userId.isBlank()) "Sign in to sync" else status, color = Color(0xFF263238), fontWeight = FontWeight.Bold, fontSize = 16.sp)
+                Spacer(Modifier.height(4.dp))
+                Text("Last sync: $dateText", color = Color(0xFF4B5563), fontSize = 12.sp)
+                Spacer(Modifier.height(12.dp))
+                Button(onClick = onRetry, enabled = userId.isNotBlank()) { Icon(Icons.Filled.Refresh, null); Spacer(Modifier.width(6.dp)); Text("Sync now") }
+            }
+        }
+        Spacer(Modifier.height(14.dp))
+        SectionTitle("Synced data", "Items currently available in your library")
+        Spacer(Modifier.height(8.dp))
+        listOf("Saved articles" to savedCount, "Reading history" to historyCount, "Reading progress" to progressCount).forEach { (label, count) ->
+            Card(Modifier.fillMaxWidth().padding(vertical = 4.dp), colors = CardDefaults.cardColors(containerColor = Color.White)) {
+                Row(Modifier.padding(15.dp), verticalAlignment = Alignment.CenterVertically) {
+                    Text(label, color = Color(0xFF263238), modifier = Modifier.weight(1f))
+                    Text(count.toString(), color = Color(0xFF536F60), fontWeight = FontWeight.Bold)
+                }
+            }
+        }
+        Spacer(Modifier.height(12.dp))
+        Text("Notes, highlights and section bookmarks are also restored from your cloud account when available.", color = Color(0xFF52606D), fontSize = 13.sp, lineHeight = 20.sp)
+    }
+}
 @Composable
 private fun ReadingStatisticsScreen(
     stories: List<Story>, readingHistory: List<String>, storyProgress: Map<String, Int>, saved: Set<String>
