@@ -184,6 +184,18 @@ private fun UpdatesApp(
             onReadingDataChange(saved, savedBooks, readingHistory)
             storyProgress.forEach { (title, position) -> onReadingProgressChange(title, position) }
         }, onError = { android.util.Log.w("UPDATES_SYNC", it) })
+        CloudReadingRepository.loadReaderAnnotations(userId, onSuccess = { cloudAnnotations ->
+            val prefs = appContext.getSharedPreferences("updates_reader_notes", android.content.Context.MODE_PRIVATE)
+            val editor = prefs.edit()
+            cloudAnnotations.forEach { (key, value) ->
+                when {
+                    key.contains("::highlight::") -> editor.putBoolean(key, value.toBoolean())
+                    key.contains("::bookmark::") -> editor.putBoolean(key, value.toBoolean())
+                    else -> editor.putString(key, value)
+                }
+            }
+            editor.apply()
+        }, onError = { android.util.Log.w("UPDATES_ANNOTATIONS_RESTORE", it) })
     }
 
     LaunchedEffect(userId) {
