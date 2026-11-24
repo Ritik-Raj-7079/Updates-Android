@@ -167,7 +167,7 @@ private fun UpdatesApp(
     var cloudProfileMessage by remember { mutableStateOf("Syncing profile…") }
     var cloudArticleMessage by remember { mutableStateOf("Loading community…") }
     var cloudSyncStatus by remember { mutableStateOf("Checking cloud sync…") }
-    var lastSyncMillis by remember { mutableStateOf(appContext.getSharedPreferences("updates_sync_state", android.content.Context.MODE_PRIVATE).getLong("last_successful_sync", 0L)) }
+    var lastSyncMillis by remember { mutableStateOf(appContext.getSharedPreferences("updates_sync_state_" + userId, android.content.Context.MODE_PRIVATE).getLong("last_successful_sync", 0L)) }
     var syncAttempt by remember { mutableIntStateOf(0) }
     fun refreshCloudSync() {
         cloudSyncStatus = "Syncing reading library…"
@@ -603,11 +603,11 @@ private fun MainDashboard(
     ) { padding ->
         Column(Modifier.fillMaxSize().padding(padding)) {
             when (selectedTab) {
-                "Home" -> HomeScreen(stories, query, onQueryChange, saved, onSave, selectedTopics, readingHistory, storyProgress, selectedFeedCategory, onFeedCategoryChange, onOpenStory, { onTabSelected("Profile") }, { onTabSelected("News") }, { onTabSelected("Research") })
+                "Home" -> HomeScreen(stories, query, onQueryChange, saved, onSave, selectedTopics, readingHistory, storyProgress, selectedFeedCategory, onFeedCategoryChange, onOpenStory, { onTabSelected("Profile") }, { onTabSelected("News") }, { onTabSelected("Research") }, currentUserId)
                 "Explore" -> KnowledgeExploreScreen(onExploreCategory)
                 "News" -> NewsScreen()
                 "Research" -> ResearchScreen()
-                "Stats" -> ReadingStatisticsScreen(stories, readingHistory, storyProgress, saved)
+                "Stats" -> ReadingStatisticsScreen(stories, readingHistory, storyProgress, saved, currentUserId)
                 "Library" -> PersonalLibraryScreen(stories, saved, readingHistory, onSave, onClearHistory, onOpenStory, savedBooks, onSaveBook, currentUserId)
                 "Profile" -> UserProfileScreen(displayName, profileBio, communityArticles.count { it.authorUid == currentUserId }, cloudProfileMessage, onProfileSave, { onTabSelected("Write") }, onSignOut)
                 "Sync" -> SyncCenterScreen(
@@ -668,10 +668,10 @@ private fun SyncCenterScreen(
 }
 @Composable
 private fun ReadingStatisticsScreen(
-    stories: List<Story>, readingHistory: List<String>, storyProgress: Map<String, Int>, saved: Set<String>
+    stories: List<Story>, readingHistory: List<String>, storyProgress: Map<String, Int>, saved: Set<String>, userId: String
 ) {
     val context = androidx.compose.ui.platform.LocalContext.current
-    val prefs = remember { context.getSharedPreferences("updates_preferences", android.content.Context.MODE_PRIVATE) }
+    val prefs = remember { context.getSharedPreferences("updates_user_" + userId, android.content.Context.MODE_PRIVATE) }
     val activeDates = remember { prefs.getStringSet("reading_active_dates", emptySet())?.toSet() ?: emptySet() }
     fun dateKey(daysAgo: Int): String = java.text.SimpleDateFormat("yyyy-MM-dd", java.util.Locale.US).format(
         java.util.Calendar.getInstance().apply { add(java.util.Calendar.DAY_OF_YEAR, -daysAgo) }.time
@@ -767,10 +767,10 @@ private fun HomeScreen(
     saved: Set<String>, onSave: (String) -> Unit, selectedTopics: Set<String>, readingHistory: List<String>, storyProgress: Map<String, Int>,
     selectedFeedCategory: String, onFeedCategoryChange: (String) -> Unit,
     onOpenStory: (Story) -> Unit, onProfileClick: () -> Unit,
-    onNewsClick: () -> Unit, onResearchClick: () -> Unit
+    onNewsClick: () -> Unit, onResearchClick: () -> Unit, userId: String
 ) {
     val context = androidx.compose.ui.platform.LocalContext.current
-    val goalPrefs = remember { context.getSharedPreferences("updates_preferences", android.content.Context.MODE_PRIVATE) }
+    val goalPrefs = remember { context.getSharedPreferences("updates_user_" + userId, android.content.Context.MODE_PRIVATE) }
     val todayKey = remember { java.text.SimpleDateFormat("yyyy-MM-dd", java.util.Locale.US).format(java.util.Date()) }
     var dailyGoal by remember { mutableIntStateOf(goalPrefs.getInt("daily_reading_goal", 3).coerceIn(1, 10)) }
     var activeDates by remember { mutableStateOf(goalPrefs.getStringSet("reading_active_dates", emptySet())?.toSet() ?: emptySet()) }
@@ -1109,7 +1109,7 @@ private fun ArticleReaderScreen(
     val context = androidx.compose.ui.platform.LocalContext.current
     val lifecycleOwner = LocalLifecycleOwner.current
     DisposableEffect(story.title, lifecycleOwner) {
-        val prefs = context.getSharedPreferences("updates_preferences", android.content.Context.MODE_PRIVATE)
+        val prefs = context.getSharedPreferences("updates_user_" + userId, android.content.Context.MODE_PRIVATE)
         var sessionStart = 0L
         fun saveSession() {
             if (sessionStart > 0L) {
@@ -1159,7 +1159,7 @@ private fun ArticleReaderScreen(
             IconButton(onClick = onBack) { Icon(Icons.Filled.ArrowBack, "Back", tint = foreground) }
             Text("UPDATES READER", color = foreground, fontFamily = androidx.compose.ui.text.font.FontFamily.Serif, fontWeight = FontWeight.Bold, fontSize = 15.sp, letterSpacing = 1.sp, modifier = Modifier.weight(1f))
             IconButton(onClick = {
-                val offlinePrefs = context.getSharedPreferences("updates_offline", android.content.Context.MODE_PRIVATE)
+                val offlinePrefs = context.getSharedPreferences("updates_offline_" + userId, android.content.Context.MODE_PRIVATE)
                 val sectionsJson = org.json.JSONArray().apply { story.sections.forEach { section -> put(org.json.JSONObject().put("title", section.title).put("body", section.body)) } }
                 val storyJson = org.json.JSONObject().put("category", story.category).put("title", story.title).put("summary", story.summary).put("readTime", story.readTime).put("sections", sectionsJson).toString()
                 val titles = (offlinePrefs.getStringSet("offline_titles", emptySet()) ?: emptySet()).toMutableSet()
