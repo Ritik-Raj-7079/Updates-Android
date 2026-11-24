@@ -8,7 +8,7 @@ service cloud.firestore {
       match /privateData/{dataId} {
         allow read, create, update, delete: if request.auth != null
           && request.auth.uid == userId
-          && dataId == "reading";
+          && dataId in ["reading", "readerAnnotations"];
       }
     }
 
