@@ -182,7 +182,7 @@ private fun UpdatesApp(
             onReadingDataChange(saved, savedBooks, readingHistory)
             cloudSyncStatus = "Reading library synced"
             lastSyncMillis = System.currentTimeMillis()
-            appContext.getSharedPreferences("updates_sync_state", android.content.Context.MODE_PRIVATE).edit().putLong("last_successful_sync", lastSyncMillis).apply()
+            appContext.getSharedPreferences("updates_sync_state_" + userId, android.content.Context.MODE_PRIVATE).edit().putLong("last_successful_sync", lastSyncMillis).apply()
         }, onError = { cloudSyncStatus = "Sync failed: $it" })
         CloudReadingRepository.loadReaderAnnotations(userId, onSuccess = { cloudAnnotations ->
             val prefs = appContext.getSharedPreferences("updates_reader_notes_" + userId, android.content.Context.MODE_PRIVATE)
@@ -197,7 +197,7 @@ private fun UpdatesApp(
             editor.apply()
             if (cloudSyncStatus.startsWith("Reading library synced")) cloudSyncStatus = "Library and annotations synced"
             lastSyncMillis = System.currentTimeMillis()
-            appContext.getSharedPreferences("updates_sync_state", android.content.Context.MODE_PRIVATE).edit().putLong("last_successful_sync", lastSyncMillis).apply()
+            appContext.getSharedPreferences("updates_sync_state_" + userId, android.content.Context.MODE_PRIVATE).edit().putLong("last_successful_sync", lastSyncMillis).apply()
         }, onError = { cloudSyncStatus = "Annotation sync failed: $it" })
     }
 
