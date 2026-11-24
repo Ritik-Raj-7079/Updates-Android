@@ -608,7 +608,7 @@ private fun MainDashboard(
                 "News" -> NewsScreen()
                 "Research" -> ResearchScreen()
                 "Stats" -> ReadingStatisticsScreen(stories, readingHistory, storyProgress, saved)
-                "Library" -> PersonalLibraryScreen(stories, saved, readingHistory, onSave, onClearHistory, onOpenStory, savedBooks, onSaveBook)
+                "Library" -> PersonalLibraryScreen(stories, saved, readingHistory, onSave, onClearHistory, onOpenStory, savedBooks, onSaveBook, currentUserId)
                 "Profile" -> UserProfileScreen(displayName, profileBio, communityArticles.count { it.authorUid == currentUserId }, cloudProfileMessage, onProfileSave, { onTabSelected("Write") }, onSignOut)
                 "Sync" -> SyncCenterScreen(
                     userId = currentUserId,
@@ -1337,7 +1337,7 @@ private fun LibraryScreen(savedStories: List<Story>, onOpenStory: (Story) -> Uni
 private fun PersonalLibraryScreen(
     stories: List<Story>, savedTitles: Set<String>, history: List<String>,
     onToggleSaved: (String) -> Unit, onClearHistory: () -> Unit,
-    onOpenStory: (Story) -> Unit, savedBooks: Set<String>, onToggleBook: (String) -> Unit
+    onOpenStory: (Story) -> Unit, savedBooks: Set<String>, onToggleBook: (String) -> Unit, userId: String
 ) {
     var section by remember { mutableStateOf("Saved") }
     val savedStories = stories.filter { it.title in savedTitles }
