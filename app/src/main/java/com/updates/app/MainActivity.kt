@@ -46,76 +46,75 @@ private val Topics = listOf(
 class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
-        val preferences = getSharedPreferences("updates_preferences", MODE_PRIVATE)
-        val displayName = preferences.getString("profile_name", "Knowledge Explorer") ?: "Knowledge Explorer"
-        val profileBio = preferences.getString("profile_bio", "") ?: ""
-        val completed = preferences.getBoolean("onboarding_completed", false)
-        val savedTopics = preferences.getStringSet("selected_topics", emptySet()) ?: emptySet()
-        val savedStoryTitles = preferences.getStringSet("saved_story_titles", emptySet()) ?: emptySet()
-        val savedBookKeys = preferences.getStringSet("saved_book_keys", emptySet()) ?: emptySet()
-        val historyJson = preferences.getString("reading_history", "[]") ?: "[]"
-        val storyProgressJson = preferences.getString("story_reading_progress", "{}") ?: "{}"
-        val initialStoryProgress = JSONObject(storyProgressJson).let { obj ->
-            buildMap { obj.keys().forEach { key -> put(key, obj.optInt(key, 0).coerceAtLeast(0)) } }
-        }
-        val articleArray = JSONArray(preferences.getString("community_articles", "[]") ?: "[]")
+        val communityPreferences = getSharedPreferences("updates_preferences", MODE_PRIVATE)
+        val articleArray = JSONArray(communityPreferences.getString("community_articles", "[]") ?: "[]")
         val initialArticles = mutableListOf<CommunityArticle>()
         for (index in 0 until articleArray.length()) {
             val item = articleArray.optJSONObject(index) ?: continue
             initialArticles.add(CommunityArticle(item.optString("id"), item.optString("title"),
-                item.optString("category"), item.optString("body"), item.optLong("publishedAt"), item.optString("authorName", "Reader"), item.optString("authorUid", "")) )
+                item.optString("category"), item.optString("body"), item.optLong("publishedAt"),
+                item.optString("authorName", "Reader"), item.optString("authorUid", "")))
         }
         setContent {
             AuthGate { firebaseUser, onSignOut ->
-            UpdatesApp(
-                showOnboardingInitially = !completed,
-                initialTopics = savedTopics,
-                initialSavedStories = savedStoryTitles,
-                initialSavedBooks = savedBookKeys,
-                initialReadingHistory = JSONArray(historyJson).let { a -> (0 until a.length()).map { a.optString(it) } },
-                initialStoryProgress = initialStoryProgress,
-                initialArticles = initialArticles,
-                initialDisplayName = displayName,
-                initialProfileBio = profileBio,
-                userId = firebaseUser.uid,
-                userEmail = firebaseUser.email ?: "",
-                onSignOut = onSignOut,
-                onProfileChange = { name, bio ->
-                    preferences.edit().putString("profile_name", name).putString("profile_bio", bio).apply()
-                },
-                onArticlesChange = { articles ->
-                    val array = JSONArray()
-                    articles.forEach { article ->
-                        array.put(JSONObject().put("id", article.id).put("title", article.title)
-                            .put("category", article.category).put("body", article.body)
-                            .put("publishedAt", article.publishedAt).put("authorName", article.authorName).put("authorUid", article.authorUid))
-                    }
-                    preferences.edit().putString("community_articles", array.toString()).apply()
-                },
-                onOnboardingComplete = { topics ->
-                    preferences.edit()
-                        .putBoolean("onboarding_completed", true)
-                        .putStringSet("selected_topics", topics)
-                        .apply()
-                },
-                onReadingDataChange = { storySet, bookSet, history ->
-                    preferences.edit().putStringSet("saved_story_titles", storySet.toSet())
-                        .putStringSet("saved_book_keys", bookSet.toSet())
-                        .putString("reading_history", JSONArray(history).toString()).apply()
-                    CloudReadingRepository.save(
-                        firebaseUser.uid,
-                        CloudReadingData(storySet, bookSet, history),
-                        onError = { android.util.Log.w("UPDATES_SYNC", it) }
-                    )
-                },
-                onReadingProgressChange = { title, position ->
-                    val progress = JSONObject(preferences.getString("story_reading_progress", "{}") ?: "{}")
-                    progress.put(title, position)
-                    preferences.edit().putString("story_reading_progress", progress.toString()).apply()
-                    CloudReadingRepository.saveProgress(firebaseUser.uid, title, position,
-                        onError = { android.util.Log.w("UPDATES_PROGRESS", it) })
+                val preferences = getSharedPreferences("updates_user_" + firebaseUser.uid, MODE_PRIVATE)
+                val displayName = preferences.getString("profile_name", "Knowledge Explorer") ?: "Knowledge Explorer"
+                val profileBio = preferences.getString("profile_bio", "") ?: ""
+                val completed = preferences.getBoolean("onboarding_completed", false)
+                val savedTopics = preferences.getStringSet("selected_topics", emptySet()) ?: emptySet()
+                val savedStoryTitles = preferences.getStringSet("saved_story_titles", emptySet()) ?: emptySet()
+                val savedBookKeys = preferences.getStringSet("saved_book_keys", emptySet()) ?: emptySet()
+                val historyJson = preferences.getString("reading_history", "[]") ?: "[]"
+                val storyProgressJson = preferences.getString("story_reading_progress", "{}") ?: "{}"
+                val initialStoryProgress = JSONObject(storyProgressJson).let { obj ->
+                    buildMap { obj.keys().forEach { key -> put(key, obj.optInt(key, 0).coerceAtLeast(0)) } }
                 }
-            )
+                UpdatesApp(
+                    showOnboardingInitially = !completed,
+                    initialTopics = savedTopics,
+                    initialSavedStories = savedStoryTitles,
+                    initialSavedBooks = savedBookKeys,
+                    initialReadingHistory = JSONArray(historyJson).let { a -> (0 until a.length()).map { a.optString(it) } },
+                    initialStoryProgress = initialStoryProgress,
+                    initialArticles = initialArticles,
+                    initialDisplayName = displayName,
+                    initialProfileBio = profileBio,
+                    userId = firebaseUser.uid,
+                    userEmail = firebaseUser.email ?: "",
+                    onSignOut = onSignOut,
+                    onProfileChange = { name, bio ->
+                        preferences.edit().putString("profile_name", name).putString("profile_bio", bio).apply()
+                    },
+                    onArticlesChange = { articles ->
+                        val array = JSONArray()
+                        articles.forEach { article ->
+                            array.put(JSONObject().put("id", article.id).put("title", article.title)
+                                .put("category", article.category).put("body", article.body)
+                                .put("publishedAt", article.publishedAt).put("authorName", article.authorName)
+                                .put("authorUid", article.authorUid))
+                        }
+                        communityPreferences.edit().putString("community_articles", array.toString()).apply()
+                    },
+                    onOnboardingComplete = { topics ->
+                        preferences.edit().putBoolean("onboarding_completed", true)
+                            .putStringSet("selected_topics", topics).apply()
+                    },
+                    onReadingDataChange = { storySet, bookSet, history ->
+                        preferences.edit().putStringSet("saved_story_titles", storySet.toSet())
+                            .putStringSet("saved_book_keys", bookSet.toSet())
+                            .putString("reading_history", JSONArray(history).toString()).apply()
+                        CloudReadingRepository.save(firebaseUser.uid,
+                            CloudReadingData(storySet, bookSet, history),
+                            onError = { android.util.Log.w("UPDATES_SYNC", it) })
+                    },
+                    onReadingProgressChange = { title, position ->
+                        val progress = JSONObject(preferences.getString("story_reading_progress", "{}") ?: "{}")
+                        progress.put(title, position)
+                        preferences.edit().putString("story_reading_progress", progress.toString()).apply()
+                        CloudReadingRepository.saveProgress(firebaseUser.uid, title, position,
+                            onError = { android.util.Log.w("UPDATES_PROGRESS", it) })
+                    }
+                )
             }
         }
     }
