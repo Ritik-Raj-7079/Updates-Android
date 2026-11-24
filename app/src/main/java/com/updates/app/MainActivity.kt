@@ -1480,8 +1480,8 @@ private fun PersonalLibraryScreen(
             }
             "Offline" -> {
                 val context = androidx.compose.ui.platform.LocalContext.current
-                val offlinePrefs = remember { context.getSharedPreferences("updates_offline", android.content.Context.MODE_PRIVATE) }
-                var offlineTitles by remember { mutableStateOf((offlinePrefs.getStringSet("offline_titles", emptySet()) ?: emptySet()).toSet()) }
+                val offlinePrefs = remember(userId) { context.getSharedPreferences("updates_offline_" + userId, android.content.Context.MODE_PRIVATE) }
+                var offlineTitles by remember(userId) { mutableStateOf((offlinePrefs.getStringSet("offline_titles", emptySet()) ?: emptySet()).toSet()) }
                 var deleteTitle by remember { mutableStateOf<String?>(null) }
                 val offlineEntries = remember(offlineTitles) {
                     offlineTitles.mapNotNull { title ->
