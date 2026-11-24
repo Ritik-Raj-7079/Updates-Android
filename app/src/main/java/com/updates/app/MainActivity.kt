@@ -671,12 +671,12 @@ private fun ReadingStatisticsScreen(
     stories: List<Story>, readingHistory: List<String>, storyProgress: Map<String, Int>, saved: Set<String>, userId: String
 ) {
     val context = androidx.compose.ui.platform.LocalContext.current
-    val prefs = remember { context.getSharedPreferences("updates_user_" + userId, android.content.Context.MODE_PRIVATE) }
-    val activeDates = remember { prefs.getStringSet("reading_active_dates", emptySet())?.toSet() ?: emptySet() }
+    val prefs = remember(userId) { context.getSharedPreferences("updates_user_" + userId, android.content.Context.MODE_PRIVATE) }
+    val activeDates = remember(userId) { prefs.getStringSet("reading_active_dates", emptySet())?.toSet() ?: emptySet() }
     fun dateKey(daysAgo: Int): String = java.text.SimpleDateFormat("yyyy-MM-dd", java.util.Locale.US).format(
         java.util.Calendar.getInstance().apply { add(java.util.Calendar.DAY_OF_YEAR, -daysAgo) }.time
     )
-    val week = remember { (6 downTo 0).map { daysAgo ->
+    val week = remember(userId) { (6 downTo 0).map { daysAgo ->
         val calendar = java.util.Calendar.getInstance().apply { add(java.util.Calendar.DAY_OF_YEAR, -daysAgo) }
         Triple(dateKey(daysAgo), java.text.SimpleDateFormat("EEE", java.util.Locale.US).format(calendar.time), calendar.get(java.util.Calendar.DAY_OF_MONTH))
     } }
@@ -770,10 +770,10 @@ private fun HomeScreen(
     onNewsClick: () -> Unit, onResearchClick: () -> Unit, userId: String
 ) {
     val context = androidx.compose.ui.platform.LocalContext.current
-    val goalPrefs = remember { context.getSharedPreferences("updates_user_" + userId, android.content.Context.MODE_PRIVATE) }
+    val goalPrefs = remember(userId) { context.getSharedPreferences("updates_user_" + userId, android.content.Context.MODE_PRIVATE) }
     val todayKey = remember { java.text.SimpleDateFormat("yyyy-MM-dd", java.util.Locale.US).format(java.util.Date()) }
-    var dailyGoal by remember { mutableIntStateOf(goalPrefs.getInt("daily_reading_goal", 3).coerceIn(1, 10)) }
-    var activeDates by remember { mutableStateOf(goalPrefs.getStringSet("reading_active_dates", emptySet())?.toSet() ?: emptySet()) }
+    var dailyGoal by remember(userId) { mutableIntStateOf(goalPrefs.getInt("daily_reading_goal", 3).coerceIn(1, 10)) }
+    var activeDates by remember(userId) { mutableStateOf(goalPrefs.getStringSet("reading_active_dates", emptySet())?.toSet() ?: emptySet()) }
     fun dateKey(daysAgo: Int): String = java.text.SimpleDateFormat("yyyy-MM-dd", java.util.Locale.US).format(
         java.util.Calendar.getInstance().apply { add(java.util.Calendar.DAY_OF_YEAR, -daysAgo) }.time
     )
@@ -1222,11 +1222,11 @@ private fun ArticleReaderScreen(
                     Spacer(Modifier.height(5.dp))
                     Text(sections[index].title, color = foreground, fontFamily = androidx.compose.ui.text.font.FontFamily.Serif, fontSize = (fontSize + 3).sp, fontWeight = FontWeight.Bold, lineHeight = (fontSize * 1.5f).sp)
                     Spacer(Modifier.height(8.dp))
-                    val readerPrefs = remember { context.getSharedPreferences("updates_reader_notes_" + userId, android.content.Context.MODE_PRIVATE) }
+                    val readerPrefs = remember(userId) { context.getSharedPreferences("updates_reader_notes_" + userId, android.content.Context.MODE_PRIVATE) }
                     val highlightKey = story.title + "::highlight::" + index
                     val bookmarkKey = story.title + "::bookmark::" + index
-                    var isHighlighted by remember(story.title, index) { mutableStateOf(readerPrefs.getBoolean(highlightKey, false)) }
-                    var isSectionBookmarked by remember(story.title, index) { mutableStateOf(readerPrefs.getBoolean(bookmarkKey, false)) }
+                    var isHighlighted by remember(userId, story.title, index) { mutableStateOf(readerPrefs.getBoolean(highlightKey, false)) }
+                    var isSectionBookmarked by remember(userId, story.title, index) { mutableStateOf(readerPrefs.getBoolean(bookmarkKey, false)) }
                     Box(Modifier.fillMaxWidth().background(if (isHighlighted) Color(0xFFFFE8A3) else Color.Transparent, RoundedCornerShape(8.dp)).padding(if (isHighlighted) 8.dp else 0.dp)) {
                         Text(sections[index].body, color = if (isHighlighted) Color(0xFF493B20) else bodyColor, fontFamily = androidx.compose.ui.text.font.FontFamily.Serif, fontSize = fontSize.sp, lineHeight = (fontSize * 1.8f).sp)
                     }
@@ -1439,7 +1439,7 @@ private fun PersonalLibraryScreen(
             "My Notes" -> {
                 val context = androidx.compose.ui.platform.LocalContext.current
                 val readerPrefs = remember { context.getSharedPreferences("updates_reader_notes_" + userId, android.content.Context.MODE_PRIVATE) }
-                val entries = remember(stories) {
+                val entries = remember(userId, stories) {
                     buildList {
                         stories.forEach { story ->
                             story.sections.forEachIndexed { index, item ->
